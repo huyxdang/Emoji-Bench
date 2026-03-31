@@ -1,3 +1,5 @@
+import pytest
+
 from emoji_bench.expressions import BinaryOp, SymbolLiteral, UnaryTransform
 from emoji_bench.interpreter import evaluate, evaluate_binary, evaluate_transform
 from emoji_bench.types import (
@@ -130,3 +132,61 @@ def test_distribution_property_zelta():
             inv_y = evaluate_transform("inv", y, system)
             rhs = evaluate_binary("op0", inv_x, inv_y, system)
             assert lhs == rhs, f"Distribution failed for ({x}, {y}): {lhs} != {rhs}"
+
+
+def test_evaluate_binary_unknown_operation_raises():
+    system = _zelta_system()
+    a, b, _ = system.symbols
+    with pytest.raises(ValueError, match="Unknown operation"):
+        evaluate_binary("missing", a, b, system)
+
+
+def test_evaluate_transform_unknown_transform_raises():
+    system = _zelta_system()
+    a, _, _ = system.symbols
+    with pytest.raises(ValueError, match="Unknown transformation"):
+        evaluate_transform("missing", a, system)
+
+
+def test_evaluate_binary_unknown_derived_template_raises():
+    system = _zelta_system()
+    malformed = DerivedOperation(
+        name="bad_dop",
+        symbol_id="⊛",
+        template_id="unknown_template",
+        base_ops=("op0",),
+        transform_name=None,
+    )
+    malformed_system = FormalSystem(
+        name=system.name,
+        seed=system.seed,
+        symbols=system.symbols,
+        base_operations=system.base_operations,
+        derived_operations=(malformed,),
+        transformations=system.transformations,
+    )
+    a, b, _ = system.symbols
+    with pytest.raises(ValueError, match="Unknown derived operation template"):
+        evaluate_binary("bad_dop", a, b, malformed_system)
+
+
+def test_evaluate_binary_inv_compose_without_transform_name_raises():
+    system = _zelta_system()
+    malformed = DerivedOperation(
+        name="bad_inv",
+        symbol_id="⊛",
+        template_id="inv_compose",
+        base_ops=("op0",),
+        transform_name=None,
+    )
+    malformed_system = FormalSystem(
+        name=system.name,
+        seed=system.seed,
+        symbols=system.symbols,
+        base_operations=system.base_operations,
+        derived_operations=(malformed,),
+        transformations=system.transformations,
+    )
+    a, b, _ = system.symbols
+    with pytest.raises(AssertionError):
+        evaluate_binary("bad_inv", a, b, malformed_system)

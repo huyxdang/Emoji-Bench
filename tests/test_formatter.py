@@ -72,3 +72,31 @@ def test_prompt_format_derived_ops_use_base_symbol():
     assert base_sym in prompt
     # Internal name should NOT appear in the prompt
     assert "op0" not in prompt
+
+
+def test_prompt_format_golden_output_fixed_seed():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    prompt = format_system_for_prompt(system)
+
+    assert prompt == """Symbols: {🪸, 🪩, 🧄, 🍄}
+
+Operation ⊕ (defined by table):
+
+| ⊕ | 🪸 | 🪩 | 🧄 | 🍄 |
+|---|---|---|---|---|
+| **🪸** | 🧄 | 🍄 | 🪩 | 🧄 |
+| **🪩** | 🧄 | 🍄 | 🍄 | 🪸 |
+| **🧄** | 🍄 | 🪩 | 🪸 | 🪸 |
+| **🍄** | 🪸 | 🧄 | 🪩 | 🪩 |
+
+Derived operation ⊗:
+x ⊗ y = (x ⊕ x) ⊕ y
+
+Transformation "inv":
+  inv(🪸) = 🪩
+  inv(🪩) = 🪸
+  inv(🧄) = 🍄
+  inv(🍄) = 🧄
+  Distribution property: inv(x ⊕ y) = inv(x) ⊕ inv(y)"""

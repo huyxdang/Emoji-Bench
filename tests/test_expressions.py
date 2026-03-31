@@ -5,6 +5,7 @@ from emoji_bench.expressions import (
     SymbolLiteral,
     UnaryTransform,
     expr_to_str,
+    expr_to_str_with_system,
     random_expression,
 )
 from emoji_bench.generator import generate_system
@@ -42,6 +43,34 @@ def test_expr_to_str_transform_nested():
     assert expr_to_str(expr) == "inv((🦩 ⊕ 🧲))"
 
 
+def test_expr_to_str_with_system_uses_display_symbols():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    a, b, c = system.symbols[:3]
+    base_op = system.base_operations[0]
+    derived_op = system.derived_operations[0]
+    transform = system.transformations[0]
+
+    expr = BinaryOp(
+        base_op.name,
+        SymbolLiteral(a),
+        UnaryTransform(
+            transform.name,
+            BinaryOp(derived_op.name, SymbolLiteral(b), SymbolLiteral(c)),
+        ),
+    )
+
+    rendered = expr_to_str_with_system(expr, system)
+
+    assert rendered == (
+        f"({a.emoji} {base_op.symbol_id} "
+        f"{transform.name}(({b.emoji} {derived_op.symbol_id} {c.emoji})))"
+    )
+    assert base_op.name not in rendered
+    assert derived_op.name not in rendered
+
+
 def test_random_expression_depth_0():
     system = generate_system(n_symbols=3, random_seed=42)
     expr = random_expression(system, depth=0, rng=random.Random(1))
@@ -60,6 +89,18 @@ def test_random_expression_produces_valid():
         _check_names(expr, op_names, tr_names, set(system.symbols))
 
 
+def test_random_expression_respects_max_depth():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=99
+    )
+    rng = random.Random(11)
+
+    for max_depth in range(5):
+        for _ in range(25):
+            expr = random_expression(system, depth=max_depth, rng=rng)
+            assert _expr_depth(expr) <= max_depth
+
+
 def _check_names(expr, op_names, tr_names, symbols):
     match expr:
         case SymbolLiteral(s):
@@ -71,3 +112,13 @@ def _check_names(expr, op_names, tr_names, symbols):
         case UnaryTransform(name, operand):
             assert name in tr_names
             _check_names(operand, op_names, tr_names, symbols)
+
+
+def _expr_depth(expr):
+    match expr:
+        case SymbolLiteral():
+            return 0
+        case BinaryOp(_, left, right):
+            return 1 + max(_expr_depth(left), _expr_depth(right))
+        case UnaryTransform(_, operand):
+            return 1 + _expr_depth(operand)
