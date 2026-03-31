@@ -1,5 +1,7 @@
 import random
 
+import pytest
+
 from emoji_bench.chain_generator import (
     count_reducible_nodes,
     find_leftmost_innermost,
@@ -16,7 +18,45 @@ from emoji_bench.expressions import (
 )
 from emoji_bench.generator import generate_system
 from emoji_bench.interpreter import evaluate
-from emoji_bench.types import Symbol
+from emoji_bench.types import (
+    DerivedOperation,
+    FormalSystem,
+    OperationTable,
+    Symbol,
+    TransformationRule,
+)
+
+
+def _system_with_template(template_id: str) -> FormalSystem:
+    a, b, c = Symbol("🦩"), Symbol("🧲"), Symbol("🪣")
+    symbols = (a, b, c)
+    table = {
+        (a, a): b, (a, b): c, (a, c): a,
+        (b, a): c, (b, b): a, (b, c): b,
+        (c, a): a, (c, b): b, (c, c): c,
+    }
+    base_op = OperationTable(name="op0", symbol_id="⊕", symbols=symbols, table=table)
+    inv = TransformationRule(
+        name="inv",
+        mapping={a: b, b: a, c: c},
+        distributes_over=("op0",),
+    )
+    derived = DerivedOperation(
+        name="dop0",
+        symbol_id="⊗",
+        template_id=template_id,
+        base_ops=("op0",),
+        transform_name="inv" if template_id == "inv_compose" else None,
+    )
+    transformations = (inv,) if template_id == "inv_compose" else ()
+    return FormalSystem(
+        name=f"{template_id} System",
+        seed=0,
+        symbols=symbols,
+        base_operations=(base_op,),
+        derived_operations=(derived,),
+        transformations=transformations,
+    )
 
 
 # --- Path helper tests ---
@@ -164,6 +204,20 @@ def test_consecutive_steps_connect():
         )
 
 
+def test_each_step_preserves_expression_value():
+    """Every correct rewrite should preserve the full expression's final value."""
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    rng = random.Random(123)
+
+    for _ in range(15):
+        expr = random_expression(system, depth=4, rng=rng)
+        steps = reduce_expression(expr, system)
+        for step in steps:
+            assert evaluate(step.before, system) == evaluate(step.after, system)
+
+
 def test_first_step_before_is_starting_expr():
     system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
     rng = random.Random(1)
@@ -218,6 +272,53 @@ def test_derived_op_expansion_step():
     # If we never found a derived op, that's okay for some seeds
     # but unlikely — at least warn
     assert False, "Never generated a derived op step in 50 attempts"
+
+
+def test_compose_left_expands_exactly():
+    system = _system_with_template("compose_left")
+    derived = system.derived_operations[0]
+    base_op_name = derived.base_ops[0]
+    a, b = system.symbols[:2]
+    expr = BinaryOp(derived.name, SymbolLiteral(a), SymbolLiteral(b))
+
+    steps = reduce_expression(expr, system)
+
+    assert steps[0].expanded_to == BinaryOp(
+        base_op_name,
+        BinaryOp(base_op_name, SymbolLiteral(a), SymbolLiteral(b)),
+        SymbolLiteral(a),
+    )
+
+
+def test_double_left_expands_exactly():
+    system = _system_with_template("double_left")
+    derived = system.derived_operations[0]
+    base_op_name = derived.base_ops[0]
+    a, b = system.symbols[:2]
+    expr = BinaryOp(derived.name, SymbolLiteral(a), SymbolLiteral(b))
+
+    steps = reduce_expression(expr, system)
+
+    assert steps[0].expanded_to == BinaryOp(
+        base_op_name,
+        BinaryOp(base_op_name, SymbolLiteral(a), SymbolLiteral(a)),
+        SymbolLiteral(b),
+    )
+
+
+def test_inv_compose_expands_exactly():
+    system = _system_with_template("inv_compose")
+    derived = system.derived_operations[0]
+    base_op_name = derived.base_ops[0]
+    a, b = system.symbols[:2]
+    expr = BinaryOp(derived.name, SymbolLiteral(a), SymbolLiteral(b))
+
+    steps = reduce_expression(expr, system)
+
+    assert steps[0].expanded_to == UnaryTransform(
+        derived.transform_name,
+        BinaryOp(base_op_name, SymbolLiteral(a), SymbolLiteral(b)),
+    )
 
 
 # --- generate_chain tests ---
@@ -276,3 +377,38 @@ def test_chain_seed_is_none_when_rng_is_used():
     system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
     chain = generate_chain(system, length=5, rng=random.Random(7))
     assert chain.seed is None
+
+
+def test_chain_step_numbers_are_contiguous():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    chain = generate_chain(system, length=7, seed=42)
+    assert [step.step_number for step in chain.steps] == list(range(1, len(chain.steps) + 1))
+
+
+def test_chain_last_step_matches_final_result():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    chain = generate_chain(system, length=7, seed=42)
+    assert isinstance(chain.steps[-1].after, SymbolLiteral)
+    assert chain.steps[-1].after.symbol == chain.final_result
+
+
+def test_generate_chain_rejects_invalid_length():
+    system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
+    with pytest.raises(ValueError, match="length must be >= 1"):
+        generate_chain(system, length=0, seed=1)
+
+
+def test_generate_chain_rejects_seed_and_rng_together():
+    system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
+    with pytest.raises(ValueError, match="either seed or rng"):
+        generate_chain(system, length=3, seed=1, rng=random.Random(1))
+
+
+def test_generate_chain_requires_seed_or_rng():
+    system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
+    with pytest.raises(ValueError, match="either seed or rng"):
+        generate_chain(system, length=3)
