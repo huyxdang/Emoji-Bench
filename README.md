@@ -175,7 +175,7 @@ For error-containing chains, select one step $K$ and modify it. The modification
 
 - **Preserve syntactic form.** The step should look exactly like a valid step — same format, same rule citation style, a result that is a valid symbol in the system.
 - **Violate a rule.** The stated result must be incorrect given the actual rules.
-- **Maintain post-error coherence.** All steps after step $K$ should be computed correctly *given the wrong result at step $K$*. This is critical — it means the chain reads fluently after the error. Only step $K$ itself is wrong; everything downstream is locally valid but globally wrong.
+- **(🔴 Hard. Is this necessary?) Maintain post-error coherence.** All steps after step $K$ should be computed correctly *given the wrong result at step $K$*. This is critical — it means the chain reads fluently after the error. Only step $K$ itself is wrong; everything downstream is locally valid but globally wrong.
 
 This design choice directly tests Circuit 1 vs. Circuit 2. Circuit 2 would see a coherent chain and accept it. Circuit 1 would flag the original violation at step $K$.
 
