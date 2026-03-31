@@ -1,6 +1,6 @@
 # Emoji-Bench
 
-## A Benchmark for Testing Genuine Error Detection in Large Language Models
+## A Benchmark for Testing Error Detection in LLMs
 
 ---
 
@@ -14,22 +14,22 @@ When a language model encounters an error in its own reasoning (or in reasoning 
 
 From the outside, these two circuits are often indistinguishable. A model that says "wait, step 3 is wrong because..." might be genuinely checking constraints or might be producing a high-likelihood token sequence that follows certain textual patterns of error correction.
 
-ARC-V is designed to **pull these two circuits apart**.
+Emoji-Bench is designed to **pull these two circuits apart**.
 
 ### Why Novelty is the Key
 
 Existing benchmarks for self-correction and error detection use domains the model has seen extensively in training: arithmetic, algebra, logic puzzles, code. High performance on these benchmarks cannot distinguish Circuit 1 from Circuit 2, because the model has been exposed to thousands of examples of errors and corrections in these domains during training.
 
-ARC-V eliminates this confound by constructing **completely novel formal systems** — invented algebras, grammars, and transformation rules that do not exist in any training corpus. If a model can detect rule violations in a system it has never seen before, it must be performing genuine constraint evaluation against the rules provided in-context. Pattern-matching from training data cannot help.
+Emoji-Bench eliminates this confound by constructing **completely novel formal systems** — invented algebras using emoji symbols, with grammars and transformation rules that do not exist in any training corpus. If a model can detect rule violations in a system it has never seen before, it must be performing genuine constraint evaluation against the rules provided in-context. Pattern-matching from training data cannot help.
 
 ### Conceptual Relationship to ARC-AGI
 
-ARC-AGI (Chollet, 2019) tests whether models can generalize to novel abstract *patterns* they haven't encountered in training. ARC-V tests whether models can enforce novel abstract *rules* they haven't encountered in training. Both are fundamentally about reasoning over unfamiliar structure rather than retrieval from memory.
+ARC-AGI (Chollet, 2019) tests whether models can generalize to novel abstract *patterns* they haven't encountered in training. Emoji-Bench tests whether models can enforce novel abstract *rules* they haven't encountered in training. Both are fundamentally about reasoning over unfamiliar structure rather than retrieval from memory.
 
 ARC-AGI asks: "Can you solve novel problems?"
-ARC-V asks: "Can you notice when you're solving them wrong?"
+Emoji-Bench asks: "Can you notice when you're solving them wrong?"
 
-ARC-V can be understood as the **metacognitive counterpart** to ARC-AGI.
+Emoji-Bench can be understood as the **metacognitive counterpart** to ARC-AGI.
 
 ---
 
@@ -44,9 +44,9 @@ ARC-V can be understood as the **metacognitive counterpart** to ARC-AGI.
 5. **Ask** the model to verify whether each step correctly applies the rules, and if not, identify and explain the violation.
 6. **Score** the model's response against a rubric that evaluates detection, localization, and explanation quality.
 
-### 2.2 What ARC-V Measures
+### 2.2 What Emoji-Bench Measures
 
-ARC-V produces a multidimensional profile of a model's error-detection capability:
+Emoji-Bench produces a multidimensional profile of a model's error-detection capability:
 
 - **Detection rate** — Can the model tell that something is wrong?
 - **Localization accuracy** — Can it identify *which* step is wrong?
@@ -66,36 +66,36 @@ Each novel formal system consists of:
 
 | Component | Description | Example |
 |---|---|---|
-| **Symbol set** | 3–6 arbitrary symbols with no real-world semantics | {▲, ●, ■} |
+| **Symbol set** | 3–6 emoji symbols with no mathematical semantics | {🦩, 🧲, 🪣} |
 | **Base operation(s)** | 1–2 binary operations defined by an explicit operation table | ⊕ defined by a 3×3 table |
 | **Derived operation(s)** | 1–2 operations defined in terms of the base operation(s) | x ⊗ y = (x ⊕ y) ⊕ x |
-| **Transformation rules** | 1–2 unary transformations with distribution properties | inv(x): ▲→●, ●→■, ■→▲; inv(x ⊕ y) = inv(x) ⊕ inv(y) |
+| **Transformation rules** | 1–2 unary transformations with distribution properties | inv(x): 🦩→🧲, 🧲→🪣, 🪣→🦩; inv(x ⊕ y) = inv(x) ⊕ inv(y) |
 
 ### 3.2 Concrete Example: "Zelta Algebra"
 
-**Symbols:** {▲, ●, ■}
+**Symbols:** {🦩, 🧲, 🪣}
 
 **Operation ⊕ (defined by table):**
 
-| ⊕ | ▲ | ● | ■ |
+| ⊕ | 🦩 | 🧲 | 🪣 |
 |---|---|---|---|
-| **▲** | ● | ■ | ▲ |
-| **●** | ■ | ▲ | ● |
-| **■** | ▲ | ● | ■ |
+| **🦩** | 🧲 | 🪣 | 🦩 |
+| **🧲** | 🪣 | 🦩 | 🧲 |
+| **🪣** | 🦩 | 🧲 | 🪣 |
 
 **Derived operation:** x ⊗ y = (x ⊕ y) ⊕ x
 
 **Transformation "inv":**
-- inv(▲) = ●
-- inv(●) = ■
-- inv(■) = ▲
+- inv(🦩) = 🧲
+- inv(🧲) = 🪣
+- inv(🪣) = 🦩
 - Distribution property: inv(x ⊕ y) = inv(x) ⊕ inv(y)
 
 ### 3.3 Procedural System Generation
 
-To ensure generality, ARC-V requires a **system generator** that produces a unique formal system for each test instance (or batch of instances). The generator should:
+To ensure generality, Emoji-Bench requires a **system generator** that produces a unique formal system for each test instance (or batch of instances). The generator should:
 
-1. **Sample a symbol set** of size $n \in \{3, 4, 5, 6\}$, using abstract glyphs, emoji, or invented token strings to minimize any semantic associations.
+1. **Sample a symbol set** of size $n \in \{3, 4, 5, 6\}$ from the curated emoji pool (see Section 3.5).
 2. **Generate an operation table** — a random $n \times n$ table mapping pairs of symbols to symbols. Optionally enforce algebraic properties (closure is automatic; associativity, commutativity, or existence of identity/inverses can be toggled to control difficulty).
 3. **Define 0–2 derived operations** using templates such as:
    - $x \circledast y = (x \oplus y) \oplus x$
@@ -106,9 +106,37 @@ To ensure generality, ARC-V requires a **system generator** that produces a uniq
 
 ### 3.4 Design Constraints
 
-- **No real-world semantics.** Symbols should not map to numbers, letters, or familiar concepts. The model must reason purely from the provided rules.
+- **No mathematical semantics.** Symbols must not carry implicit mathematical or logical associations. Emoji are chosen specifically to be semantically distant from formal reasoning (see Section 3.5).
 - **Determinism.** Every expression in the system must have exactly one correct result. Ambiguity in the rules would make the benchmark unmeasurable.
 - **Complexity control.** The number of symbols, operations, and rules should be parameterized so that benchmark difficulty can be scaled systematically.
+
+### 3.5 Emoji Symbol Pool
+
+Emoji-Bench uses emoji as symbols because they offer several advantages over abstract glyphs (▲, ●, ■):
+
+**Tokenization reliability.** Most common emoji are represented as single tokens in modern tokenizers (GPT, Claude, Gemma, Llama). Abstract Unicode symbols like ▲ or ■ can tokenize unpredictably — sometimes as a single token, sometimes split into multi-byte sequences — introducing unwanted variance across models.
+
+**Visual distinctiveness.** Emoji are immediately visually distinguishable, making the benchmark easier for humans to read, debug, validate, and present in papers or demos.
+
+**Semantic distance from mathematics.** By curating a pool of emoji that have no mathematical or logical associations, we ensure the model cannot leverage implicit semantic priors.
+
+**Curated Pool (~30 emoji, randomized per system):**
+
+| Category | Emoji |
+|---|---|
+| Animals | 🦩 🐙 🦔 🪼 🦎 🐌 |
+| Objects | 🧲 🪣 🪆 🧿 🪤 🪩 |
+| Nature | 🍄 🫧 🪸 🪻 🌵 🪨 |
+| Food | 🧁 🫐 🥟 🪺 🧄 🫑 |
+| Misc | 🪬 🧊 🪈 🪭 🧶 🪵 |
+
+**Selection criteria:**
+- Must tokenize as a single token across major model families (GPT-4, Claude, Llama 3, Gemma 2). Verify empirically before finalizing the pool.
+- Must have no mathematical, logical, or ordering connotation. Excluded: ➕, ✖️, ⭐, 🔢, 🏆, 🥇, 🥈, 🥉, or any emoji commonly used in puzzle/quiz contexts.
+- Must be visually distinct from each other at small font sizes.
+- Assignments are randomized per formal system — the same emoji can play different roles in different systems, preventing the model from learning fixed symbol-role mappings across benchmark instances.
+
+**Contamination risk mitigation.** While emoji appear in training data (including emoji math puzzles on social media), the combination of (a) randomized symbol-role assignments, (b) procedurally generated operation tables, and (c) novel derived operations and transformations ensures that no specific system instance exists in any training corpus. The emoji are familiar tokens; the algebraic structures built from them are not.
 
 ---
 
@@ -125,13 +153,13 @@ Step K: [expression] = [result]    [by rule/operation name]
 For example:
 
 ```
-Start: (▲ ⊕ ●) ⊗ ■
+Start: (🦩 ⊕ 🧲) ⊗ 🪣
 
-Step 1: ▲ ⊕ ● = ■                              [by ⊕ table]
-Step 2: ■ ⊗ ■ = (■ ⊕ ■) ⊕ ■                    [by definition of ⊗]
-Step 3: ■ ⊕ ■ = ■                               [by ⊕ table]
-Step 4: ■ ⊕ ■ = ■                               [by ⊕ table]
-Step 5: Result: ■
+Step 1: 🦩 ⊕ 🧲 = 🪣                              [by ⊕ table]
+Step 2: 🪣 ⊗ 🪣 = (🪣 ⊕ 🪣) ⊕ 🪣                    [by definition of ⊗]
+Step 3: 🪣 ⊕ 🪣 = 🪣                               [by ⊕ table]
+Step 4: 🪣 ⊕ 🪣 = 🪣                               [by ⊕ table]
+Step 5: Result: 🪣
 ```
 
 ### 4.2 Chain Generation Process
@@ -155,18 +183,18 @@ This design choice directly tests Circuit 1 vs. Circuit 2. Circuit 2 would see a
 
 ## 5. Error Taxonomy
 
-Not all errors are equivalent. ARC-V categorizes injected errors into types of increasing subtlety:
+Not all errors are equivalent. Emoji-Bench categorizes injected errors into types of increasing subtlety:
 
 ### 5.1 Error Types
 
 | Type | Code | Description | Example |
 |---|---|---|---|
-| **Wrong operands** | `E-OP` | Correct rule, applied to the wrong inputs | Applies "▲ ⊕ ● = ■" but the expression has "● ⊕ ▲" |
-| **Wrong result** | `E-RES` | Correct operands, correct rule cited, but the stated output is incorrect | "▲ ⊕ ● = ●" instead of "▲ ⊕ ● = ■" |
+| **Wrong operands** | `E-OP` | Correct rule, applied to the wrong inputs | Applies "🦩 ⊕ 🧲 = 🪣" but the expression has "🧲 ⊕ 🦩" |
+| **Wrong result** | `E-RES` | Correct operands, correct rule cited, but the stated output is incorrect | "🦩 ⊕ 🧲 = 🧲" instead of "🦩 ⊕ 🧲 = 🪣" |
 | **Wrong rule cited** | `E-RULE` | Step cites rule X but the actual computation follows rule Y (and rule Y gives a different result) | Step says "by definition of ⊗" but computes something inconsistent with that definition |
 | **Invented rule** | `E-INV` | Applies a transformation or operation that was never defined in the system | Uses "double(x)" when no such operation exists |
 | **Cascading error** | `E-CASC` | Error at step $K$; all subsequent steps are valid given the wrong result but wrong given the correct result | Step 3 is wrong, steps 4–8 are locally correct but globally wrong |
-| **Subtle off-by-one** | `E-SUB` | Swaps to an adjacent entry in the operation table — result is "close" to correct | ▲ ⊕ ● = ▲ instead of ■, where ▲ is the result of a neighboring cell |
+| **Subtle off-by-one** | `E-SUB` | Swaps to an adjacent entry in the operation table — result is "close" to correct | 🦩 ⊕ 🧲 = 🦩 instead of 🪣, where 🦩 is the result of a neighboring cell |
 
 ### 5.2 Difficulty Ordering
 
@@ -179,7 +207,7 @@ From easiest to hardest (predicted):
 5. `E-SUB` — Hardest to detect because the wrong result is "almost right."
 6. `E-CASC` — Tests whether the model catches the root error or accepts the locally-coherent cascade.
 
-This ordering is itself a hypothesis that ARC-V can test empirically.
+This ordering is itself a hypothesis that Emoji-Bench can test empirically.
 
 ---
 
@@ -208,7 +236,7 @@ If all steps are correct, state that the derivation is valid.
 
 ### 6.2 Experimental Conditions
 
-ARC-V requires four conditions to separate Circuit 1 from Circuit 2:
+Emoji-Bench requires four conditions to separate Circuit 1 from Circuit 2:
 
 **Condition 1: Core Evaluation (Error-Injected Chains)**
 Chains with exactly one injected error. This is the primary test. Measures detection rate, localization accuracy, and explanation quality across all error types.
@@ -257,7 +285,7 @@ Each model response is scored on three dimensions:
 - 0 — Misidentifies the violation, gives a wrong explanation, or hallucinates an error on a clean chain
 
 **Composite Score:**
-$$\text{ARC-V Score} = \frac{1}{N} \sum_{i=1}^{N} \left( \mathbb{1}[\text{detected}_i] \times \frac{\text{localization}_i}{2} \times \frac{\text{explanation}_i}{3} \right)$$
+$$\text{Emoji-Bench Score} = \frac{1}{N} \sum_{i=1}^{N} \left( \mathbb{1}[\text{detected}_i] \times \frac{\text{localization}_i}{2} \times \frac{\text{explanation}_i}{3} \right)$$
 
 This multiplicative structure means the model gets zero credit if it fails at any stage — detecting an error but localizing it wrong, or localizing it correctly but explaining it incorrectly, both receive heavily penalized scores.
 
@@ -265,7 +293,7 @@ This multiplicative structure means the model gets zero credit if it fails at an
 
 ## 7. Scaling Dimensions
 
-ARC-V is designed to be parameterized along several axes to produce a difficulty gradient:
+Emoji-Bench is designed to be parameterized along several axes to produce a difficulty gradient:
 
 ### 7.1 System Complexity
 
@@ -364,7 +392,7 @@ A model relying purely on coherence / pattern-matching would show:
 
 ### 9.3 Reality: The Spectrum
 
-Most models will fall somewhere between these profiles, potentially showing Circuit 1-like behavior for some error types (e.g., E-INV, E-RULE) and Circuit 2-like behavior for others (e.g., E-CASC, E-SUB). This granularity is by design — ARC-V is not trying to produce a single "metacognition score" but a detailed diagnostic profile.
+Most models will fall somewhere between these profiles, potentially showing Circuit 1-like behavior for some error types (e.g., E-INV, E-RULE) and Circuit 2-like behavior for others (e.g., E-CASC, E-SUB). This granularity is by design — Emoji-Bench is not trying to produce a single "metacognition score" but a detailed diagnostic profile.
 
 ---
 
@@ -416,7 +444,7 @@ An LLM-based judge (using a separate, stronger model) may be necessary for scori
 
 ### 11.1 Internal Representation Probing
 
-For open-weight models, ARC-V can be extended with mechanistic interpretability:
+For open-weight models, Emoji-Bench can be extended with mechanistic interpretability:
 
 - Train a linear probe on the model's residual stream activations at each step to predict "this step contains an error."
 - Key question: does the probe detect errors the model *fails to self-correct in its output*?
@@ -433,13 +461,13 @@ Instead of presenting pre-built chains for verification, ask the model to *gener
 
 ### 11.4 Multi-Agent Error Propagation
 
-Present a chain where "Agent A" generated steps 1–5 and "Agent B" must continue from step 5. Inject an error in Agent A's work. Does Agent B catch it before continuing, or does it build on the error? This extends ARC-V into the multi-agent communication setting.
+Present a chain where "Agent A" generated steps 1–5 and "Agent B" must continue from step 5. Inject an error in Agent A's work. Does Agent B catch it before continuing, or does it build on the error? This extends Emoji-Bench into the multi-agent communication setting.
 
 ---
 
 ## 12. Summary
 
-ARC-V is a benchmark designed to answer a specific, fundamental question about large language models:
+Emoji-Bench is a benchmark designed to answer a specific, fundamental question about large language models:
 
 **When a model detects an error, is it performing genuine constraint evaluation (Circuit 1) — or is it pattern-matching on surface features of text that resembled mistakes in its training data (Circuit 2)?**
 
@@ -475,7 +503,3 @@ The benchmark produces not a single score but a **metacognitive profile** — a 
 - **SelfCheckGPT** (Manakul et al., 2023) — Hallucination detection through self-consistency
 - **LLM Self-Correction Literature** (Huang et al., 2024) — Survey of intrinsic self-correction capabilities
 - **Calibration and Confidence Estimation** — AUROC-based evaluation of model confidence (related to IDK-style benchmarks)
-
----
-
-*ARC-V: Alien Rule Compliance Verification — Measuring whether language models can keep vigil over their own reasoning.*
