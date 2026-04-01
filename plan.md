@@ -196,7 +196,7 @@ Not all errors are equivalent. Emoji-Bench categorizes injected errors into type
 | **Cascading error** | `E-CASC` | Error at step $K$; all subsequent steps are valid given the wrong result but wrong given the correct result | Step 3 is wrong, steps 4–8 are locally correct but globally wrong |
 | **Subtle off-by-one** | `E-SUB` | Swaps to an adjacent entry in the operation table — result is "close" to correct | 🦩 ⊕ 🧲 = 🦩 instead of 🪣, where 🦩 is the result of a neighboring cell |
 
-**Implementation note (current roadmap):** `E-OP` and `E-SUB` are deferred for now. Under the current prompt format, derivation steps are shown as full-expression rewrites rather than explicit local reductions, which makes these two categories weakly separable from `E-RES` in model-visible terms. Initial implementation should prioritize `E-RES`, `E-CASC`, `E-RULE`, and `E-INV`, and revisit `E-OP` / `E-SUB` after adding a prompt mode that exposes the local subexpression being reduced.
+**Implementation status:** `E-RES`, `E-RULE`, `E-INV`, and `E-CASC` are implemented in the current codebase. `E-OP` and `E-SUB` are deferred for now. Under the current prompt format, derivation steps are shown as full-expression rewrites rather than explicit local reductions, which makes these two categories weakly separable from `E-RES` in model-visible terms. They should be revisited after adding a prompt mode that exposes the local subexpression being reduced.
 
 ### 5.2 Difficulty Ordering
 
@@ -239,6 +239,8 @@ If all steps are correct, state that the derivation is valid.
 ### 6.2 Experimental Conditions
 
 Emoji-Bench requires four conditions to separate Circuit 1 from Circuit 2:
+
+**Implementation status:** the current codebase supports Condition 1 (error-injected chains) and Condition 2 (clean chains). Conditions 3 and 4, along with the control conditions below, remain roadmap items.
 
 **Condition 1: Core Evaluation (Error-Injected Chains)**
 Chains with exactly one injected error. This is the primary test. Measures detection rate, localization accuracy, and explanation quality across all error types.

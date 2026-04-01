@@ -77,6 +77,23 @@ Step 5: (🪩 ⊕ 🍄) = 🪸    [by ⊕ table]
 Result: 🪸
 ```
 
+### Status / TODO
+
+Currently supported error types are `E-RES`, `E-RULE`, `E-INV`, and `E-CASC`. `E-OP` and `E-SUB` are intentionally deferred for now because the current prompt format exposes full-expression rewrites rather than explicit local reductions.
+
+- [x] Procedural generation of formal systems across Easy / Medium / Hard / Expert settings
+- [x] Recursive expression interpreter for base ops, derived ops, and transformations
+- [x] Deterministic derivation-chain generation with reproducible seeds
+- [x] Prompt generation for clean and error-injected benchmark instances
+- [x] Error injection for `E-RES`, `E-RULE`, `E-INV`, and `E-CASC`
+- [x] JSON round-tripping for generated formal systems
+- [x] End-to-end test coverage across generator, formatter, interpreter, chain builder, and benchmark APIs
+- [ ] Suspicious-but-correct benchmark condition
+- [ ] Rule-visibility ablation / no-rules control
+- [ ] Familiar-domain arithmetic mirror condition
+- [ ] Scoring / evaluation harness for model responses
+- [ ] Local-reduction prompt mode to support deferred `E-OP` and `E-SUB`
+
 ---
 
 ## Core Components
@@ -135,12 +152,17 @@ The seed makes everything deterministic and reproducible.
 pytest tests/ -v
 ```
 
-45 tests covering unit tests for each module, integration tests at all four difficulty levels, and a 50-seed stress test verifying consistency across 200 generated systems.
+128 tests covering unit tests for each module, integration tests at all four difficulty levels, benchmark error-injection paths, and a 50-seed stress test verifying consistency across 200 generated systems.
 
 ## Project Structure
 
 ```
 emoji_bench/
+    benchmark.py      # Benchmark-instance generation
+    benchmark_types.py # Benchmark enums and metadata
+    chain_generator.py # Step-by-step derivation generation
+    chain_types.py     # ChainStep / DerivationChain dataclasses
+    error_injector.py  # Error-type injection logic
     types.py          # Core dataclasses: Symbol, OperationTable, FormalSystem, etc.
     symbols.py        # Emoji pool and sampling
     operations.py     # Table generation (random magma + automorphism-compatible)
@@ -149,6 +171,7 @@ emoji_bench/
     transforms.py     # Automorphism search and validation
     generator.py      # Top-level system generator
     formatter.py      # JSON serialization and prompt formatting
+    prompt_formatter.py # Full benchmark prompt rendering
 tests/
-    test_*.py         # 45 tests
+    test_*.py         # 128 tests
 ```
