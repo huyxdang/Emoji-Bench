@@ -40,6 +40,43 @@ Each benchmark instance is a **formal system** -- a set of emoji symbols, operat
 | Hard | 5 | 2 | 1 | 1 |
 | Expert | 6 | 2 | 2 | 2 |
 
+### Example: Medium `E-CASC` Instance
+
+The example below shows a medium-difficulty problem with one injected cascading error. Step 2 is wrong: `inv(🍄)` should reduce to `🧄`, but the chain says `🍄`. Steps 3-5 are then locally valid given that wrong intermediate value, which is exactly what makes `E-CASC` interesting.
+
+```text
+Symbols: {🪸, 🪩, 🧄, 🍄}
+
+Operation ⊕ (defined by table):
+
+| ⊕ | 🪸 | 🪩 | 🧄 | 🍄 |
+|---|---|---|---|---|
+| **🪸** | 🧄 | 🍄 | 🪩 | 🧄 |
+| **🪩** | 🧄 | 🍄 | 🍄 | 🪸 |
+| **🧄** | 🍄 | 🪩 | 🪸 | 🪸 |
+| **🍄** | 🪸 | 🧄 | 🪩 | 🪩 |
+
+Derived operation ⊗:
+x ⊗ y = (x ⊕ x) ⊕ y
+
+Transformation "inv":
+  inv(🪸) = 🪩
+  inv(🪩) = 🪸
+  inv(🧄) = 🍄
+  inv(🍄) = 🧄
+  Distribution property: inv(x ⊕ y) = inv(x) ⊕ inv(y)
+
+Start: (inv(🧄) ⊗ inv(🍄))
+
+Step 1: (inv(🧄) ⊗ inv(🍄)) = (🍄 ⊗ inv(🍄))    [by inv]
+Step 2: (🍄 ⊗ inv(🍄)) = (🍄 ⊗ 🍄)    [by inv]
+Step 3: (🍄 ⊗ 🍄) = ((🍄 ⊕ 🍄) ⊕ 🍄)    [by definition of ⊗]
+Step 4: ((🍄 ⊕ 🍄) ⊕ 🍄) = (🪩 ⊕ 🍄)    [by ⊕ table]
+Step 5: (🪩 ⊕ 🍄) = 🪸    [by ⊕ table]
+
+Result: 🪸
+```
+
 ---
 
 ## Core Components
