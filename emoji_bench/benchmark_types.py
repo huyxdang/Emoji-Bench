@@ -15,7 +15,6 @@ class Condition(str, Enum):
 
 class ErrorType(str, Enum):
     E_RES = "E-RES"
-    E_RULE = "E-RULE"
     E_INV = "E-INV"
     E_CASC = "E-CASC"
 

@@ -79,13 +79,13 @@ Result: 🪸
 
 ### Status / TODO
 
-Currently supported error types are `E-RES`, `E-RULE`, `E-INV`, and `E-CASC`. `E-OP` and `E-SUB` are intentionally deferred for now because the current prompt format exposes full-expression rewrites rather than explicit local reductions.
+Currently supported error types are `E-RES`, `E-INV`, and `E-CASC`. `E-OP` and `E-SUB` are intentionally deferred for now because the current prompt format exposes full-expression rewrites rather than explicit local reductions.
 
 - [x] Procedural generation of formal systems across Easy / Medium / Hard / Expert settings
 - [x] Recursive expression interpreter for base ops, derived ops, and transformations
 - [x] Deterministic derivation-chain generation with reproducible seeds
 - [x] Prompt generation for clean and error-injected benchmark instances
-- [x] Error injection for `E-RES`, `E-RULE`, `E-INV`, and `E-CASC`
+- [x] Error injection for `E-RES`, `E-INV`, and `E-CASC`
 - [x] JSON round-tripping for generated formal systems
 - [x] End-to-end test coverage across generator, formatter, interpreter, chain builder, and benchmark APIs
 - [ ] Suspicious-but-correct benchmark condition

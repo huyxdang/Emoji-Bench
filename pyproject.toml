@@ -8,6 +8,7 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest"]
+hf = ["huggingface_hub>=0.23"]
 
 [build-system]
 requires = ["hatchling"]

@@ -191,23 +191,21 @@ Not all errors are equivalent. Emoji-Bench categorizes injected errors into type
 |---|---|---|---|
 | **Wrong operands** | `E-OP` | Correct rule, applied to the wrong inputs | Applies "🦩 ⊕ 🧲 = 🪣" but the expression has "🧲 ⊕ 🦩" |
 | **Wrong result** | `E-RES` | Correct operands, correct rule cited, but the stated output is incorrect | "🦩 ⊕ 🧲 = 🧲" instead of "🦩 ⊕ 🧲 = 🪣" |
-| **Wrong rule cited** | `E-RULE` | Step cites rule X but the actual computation follows rule Y (and rule Y gives a different result) | Step says "by definition of ⊗" but computes something inconsistent with that definition |
 | **Invented rule** | `E-INV` | Applies a transformation or operation that was never defined in the system | Uses "double(x)" when no such operation exists |
 | **Cascading error** | `E-CASC` | Error at step $K$; all subsequent steps are valid given the wrong result but wrong given the correct result | Step 3 is wrong, steps 4–8 are locally correct but globally wrong |
 | **Subtle off-by-one** | `E-SUB` | Swaps to an adjacent entry in the operation table — result is "close" to correct | 🦩 ⊕ 🧲 = 🦩 instead of 🪣, where 🦩 is the result of a neighboring cell |
 
-**Implementation status:** `E-RES`, `E-RULE`, `E-INV`, and `E-CASC` are implemented in the current codebase. `E-OP` and `E-SUB` are deferred for now. Under the current prompt format, derivation steps are shown as full-expression rewrites rather than explicit local reductions, which makes these two categories weakly separable from `E-RES` in model-visible terms. They should be revisited after adding a prompt mode that exposes the local subexpression being reduced.
+**Implementation status:** `E-RES`, `E-INV`, and `E-CASC` are implemented in the current codebase. `E-OP` and `E-SUB` are deferred for now. Under the current prompt format, derivation steps are shown as full-expression rewrites rather than explicit local reductions, which makes these two categories weakly separable from `E-RES` in model-visible terms. They should be revisited after adding a prompt mode that exposes the local subexpression being reduced.
 
 ### 5.2 Difficulty Ordering
 
 From easiest to hardest (predicted):
 
 1. `E-INV` — Invented rules are the most obvious because the model can check whether the cited operation exists.
-2. `E-RULE` — Mismatch between cited rule and computation requires cross-referencing but is fairly salient.
-3. `E-RES` — Requires looking up the operation table and checking the output.
-4. `E-OP` — Requires verifying that the operands in the step match the expression being simplified. (Deferred)
-5. `E-SUB` — Hardest to detect because the wrong result is "almost right." (Deferred)
-6. `E-CASC` — Tests whether the model catches the root error or accepts the locally-coherent cascade.
+2. `E-RES` — Requires looking up the operation table and checking the output.
+3. `E-OP` — Requires verifying that the operands in the step match the expression being simplified. (Deferred)
+4. `E-SUB` — Hardest to detect because the wrong result is "almost right." (Deferred)
+5. `E-CASC` — Tests whether the model catches the root error or accepts the locally-coherent cascade.
 
 This ordering is itself a hypothesis that Emoji-Bench can test empirically.
 
@@ -320,7 +318,7 @@ Emoji-Bench is designed to be parameterized along several axes to produce a diff
 
 | Level | Error Types Included |
 |---|---|
-| **Obvious** | E-INV, E-RULE |
+| **Obvious** | E-INV |
 | **Moderate** | E-RES, E-OP |
 | **Subtle** | E-SUB, E-CASC |
 
@@ -396,7 +394,7 @@ A model relying purely on coherence / pattern-matching would show:
 
 ### 9.3 Reality: The Spectrum
 
-Most models will fall somewhere between these profiles, potentially showing Circuit 1-like behavior for some error types (e.g., E-INV, E-RULE) and Circuit 2-like behavior for others (e.g., E-CASC, E-SUB). This granularity is by design — Emoji-Bench is not trying to produce a single "metacognition score" but a detailed diagnostic profile.
+Most models will fall somewhere between these profiles, potentially showing Circuit 1-like behavior for some error types (e.g., E-INV, E-RES) and Circuit 2-like behavior for others (e.g., E-CASC, E-SUB). This granularity is by design — Emoji-Bench is not trying to produce a single "metacognition score" but a detailed diagnostic profile.
 
 ---
 
