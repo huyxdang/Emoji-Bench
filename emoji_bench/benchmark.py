@@ -4,6 +4,7 @@ from emoji_bench.benchmark_types import BenchmarkInstance, Condition, ErrorType
 from emoji_bench.chain_generator import generate_chain
 from emoji_bench.error_injector import (
     inject_cascading_wrong_result,
+    inject_invented_rule,
     inject_wrong_result,
     inject_wrong_rule,
 )
@@ -47,6 +48,12 @@ def generate_benchmark_instance(
             )
         elif error_type is ErrorType.E_RULE:
             injected_chain, error_info = inject_wrong_rule(
+                chain,
+                system,
+                seed=error_seed,
+            )
+        elif error_type is ErrorType.E_INV:
+            injected_chain, error_info = inject_invented_rule(
                 chain,
                 system,
                 seed=error_seed,

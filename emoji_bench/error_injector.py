@@ -11,6 +11,7 @@ from emoji_bench.chain_generator import (
 )
 from emoji_bench.chain_types import ChainStep, DerivationChain
 from emoji_bench.expressions import Expression, SymbolLiteral
+from emoji_bench.generator import OPERATOR_SYMBOLS, TRANSFORM_NAMES
 from emoji_bench.types import FormalSystem, Symbol
 
 
@@ -68,6 +69,34 @@ def _available_rule_choices(system: FormalSystem) -> tuple[tuple[str, str], ...]
     return tuple(choices)
 
 
+def _invented_rule_choices(system: FormalSystem) -> tuple[tuple[str, str], ...]:
+    """Return plausible rule labels that are not defined in the system."""
+    available_rules = {rule_used for rule_used, _ in _available_rule_choices(system)}
+    used_op_symbols = {
+        op.symbol_id for op in (*system.base_operations, *system.derived_operations)
+    }
+    used_transform_names = {transform.name for transform in system.transformations}
+
+    invented_choices: list[tuple[str, str]] = []
+
+    for op_symbol in OPERATOR_SYMBOLS:
+        if op_symbol in used_op_symbols:
+            continue
+        invented_choices.append((f"{op_symbol} table", "base_op"))
+        invented_choices.append((f"definition of {op_symbol}", "derived_op"))
+
+    for transform_name in TRANSFORM_NAMES:
+        if transform_name in used_transform_names:
+            continue
+        invented_choices.append((transform_name, "transform"))
+
+    return tuple(
+        (rule_used, rule_type)
+        for rule_used, rule_type in invented_choices
+        if rule_used not in available_rules
+    )
+
+
 def get_wrong_result_eligible_steps(chain: DerivationChain) -> tuple[ChainStep, ...]:
     """Return steps eligible for non-cascading wrong-result injection.
 
@@ -98,6 +127,16 @@ def get_wrong_rule_eligible_steps(
         for step in chain.steps
         if any(rule_used != step.rule_used for rule_used, _ in available_rules)
     )
+
+
+def get_invented_rule_eligible_steps(
+    chain: DerivationChain,
+    system: FormalSystem,
+) -> tuple[ChainStep, ...]:
+    """Return steps where a nonexistent but plausible rule label can be cited."""
+    if not _invented_rule_choices(system):
+        return ()
+    return chain.steps
 
 
 def inject_wrong_result(
@@ -212,6 +251,61 @@ def inject_wrong_rule(
         original_chain=chain,
         correct_rule_used=target.rule_used,
         injected_rule_used=injected_rule_used,
+    )
+    return mutated_chain, error_info
+
+
+def inject_invented_rule(
+    chain: DerivationChain,
+    system: FormalSystem,
+    *,
+    step_number: int | None = None,
+    rng: random.Random | None = None,
+    seed: int | None = None,
+) -> tuple[DerivationChain, ErrorInfo]:
+    """Inject a citation to a rule that is not defined in the system."""
+    rng = _resolve_rng(rng=rng, seed=seed)
+
+    eligible_steps = get_invented_rule_eligible_steps(chain, system)
+    if not eligible_steps:
+        raise ValueError("No eligible steps for invented-rule injection")
+
+    if step_number is None:
+        target = rng.choice(eligible_steps)
+    else:
+        matches = [step for step in eligible_steps if step.step_number == step_number]
+        if not matches:
+            raise ValueError(f"Step {step_number} is not eligible for invented-rule injection")
+        target = matches[0]
+
+    invented_rule_used, invented_rule_type = rng.choice(_invented_rule_choices(system))
+
+    mutated_step = replace(
+        target,
+        rule_used=invented_rule_used,
+        rule_type=invented_rule_type,
+    )
+    mutated_steps = tuple(
+        mutated_step if step.step_number == target.step_number else step
+        for step in chain.steps
+    )
+    mutated_chain = DerivationChain(
+        starting_expression=chain.starting_expression,
+        steps=mutated_steps,
+        final_result=chain.final_result,
+        seed=chain.seed,
+    )
+
+    error_info = ErrorInfo(
+        error_type=ErrorType.E_INV,
+        step_number=target.step_number,
+        correct_result=target.result_symbol,
+        injected_result=target.result_symbol,
+        correct_after=target.after,
+        injected_after=target.after,
+        original_chain=chain,
+        correct_rule_used=target.rule_used,
+        injected_rule_used=invented_rule_used,
     )
     return mutated_chain, error_info
 
