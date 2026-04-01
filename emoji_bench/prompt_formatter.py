@@ -30,13 +30,11 @@ def format_chain(chain: DerivationChain, system: FormalSystem) -> str:
 
 
 TASK_PROMPT = """\
-Verify whether each step in the derivation correctly applies the rules
-of the formal system. If any step contains an error, identify:
-1. Which step contains the error
-2. What rule was violated
-3. What the correct result should be
+Check whether your working out contains an error.
 
-If all steps are correct, state that the derivation is valid."""
+Return:
+1. `has_error`: yes or no
+2. `error_step`: the first incorrect step number, or `null` if there is no error"""
 
 
 def format_benchmark_prompt(system: FormalSystem, chain: DerivationChain) -> str:
@@ -47,6 +45,6 @@ def format_benchmark_prompt(system: FormalSystem, chain: DerivationChain) -> str
     return (
         f'Below is a formal system called "{system.name}".\n\n'
         f"=== RULES ===\n{rules}\n\n"
-        f"=== DERIVATION ===\n{derivation}\n\n"
+        f"=== YOUR WORKING OUT ===\n{derivation}\n\n"
         f"=== TASK ===\n{TASK_PROMPT}"
     )

@@ -1,6 +1,15 @@
 import json
+import subprocess
+import sys
+from pathlib import Path
 
-from emoji_bench.dataset import DEFAULT_VARIANTS, generate_dataset_records, write_dataset
+from emoji_bench.benchmark_types import Condition, ErrorType
+from emoji_bench.dataset import (
+    DEFAULT_VARIANTS,
+    DatasetVariant,
+    generate_dataset_records,
+    write_dataset,
+)
 
 
 def test_generate_dataset_records_produces_balanced_variants():
@@ -52,14 +61,13 @@ def test_generate_dataset_records_include_expected_schema():
 
     assert clean["error_type"] is None
     assert clean["expected_error_step"] is None
-    assert clean["expected_correct_result"] is None
-    assert clean["expected_correct_rule"] is None
     assert clean["actual_step_count"] >= 1
 
     assert e_inv["has_error"] is True
     assert e_inv["expected_error_step"] is not None
-    assert e_inv["expected_correct_rule"] is not None
     assert e_inv["actual_step_count"] >= 1
+    assert "expected_correct_result" not in e_inv
+    assert "expected_correct_rule" not in e_inv
 
     assert len(easy_base) == len(DEFAULT_VARIANTS) - 1
     assert {record["error_type"] for record in easy_base} == {None, "E-RES", "E-INV"}
@@ -111,3 +119,72 @@ def test_write_dataset_outputs_jsonl_and_manifest(tmp_path):
 
     card_text = readme_path.read_text(encoding="utf-8")
     assert "huyxdang/emoji-bench-test" in card_text
+
+
+def test_generate_dataset_records_supports_e_casc_only():
+    split_records, manifest = generate_dataset_records(
+        dataset_name="emoji-bench-e-casc",
+        bases_per_difficulty=1,
+        master_seed=123,
+        train_ratio=0.0,
+        validation_ratio=0.0,
+        target_lengths={
+            "easy": 4,
+            "medium": 4,
+            "hard": 4,
+            "expert": 4,
+        },
+        variants=(
+            DatasetVariant(
+                name="e_casc",
+                condition=Condition.ERROR_INJECTED,
+                error_type=ErrorType.E_CASC,
+                has_error=True,
+            ),
+        ),
+    )
+
+    assert len(split_records["test"]) == 4
+    assert manifest.total_examples == 4
+    assert manifest.error_type_counts == {"E-CASC": 4}
+
+
+def test_generate_dataset_script_supports_error_type_and_count(tmp_path):
+    repo_root = Path(__file__).resolve().parents[1]
+    output_dir = tmp_path / "dataset"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/generate_dataset.py",
+            "--dataset-name",
+            "emoji-bench-e-casc-cli",
+            "--output-dir",
+            str(output_dir),
+            "--bases-per-difficulty",
+            "1",
+            "--error-type",
+            "E-CASC",
+            "--count",
+            "8",
+            "--target-length",
+            "4",
+            "--train-ratio",
+            "0",
+            "--validation-ratio",
+            "0",
+            "--master-seed",
+            "123",
+        ],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    summary = json.loads(result.stdout)
+    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+
+    assert summary["total_examples"] == 8
+    assert summary["error_type_counts"] == {"E-CASC": 8}
+    assert manifest["total_examples"] == 8
+    assert manifest["error_type_counts"] == {"E-CASC": 8}

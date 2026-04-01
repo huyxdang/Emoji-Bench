@@ -139,6 +139,48 @@ def _git_commit() -> str | None:
     return result.stdout.strip() or None
 
 
+def _variant_seed_offsets(
+    variants: tuple[DatasetVariant, ...],
+) -> dict[DatasetVariant, int]:
+    return {
+        variant: 101 + index
+        for index, variant in enumerate(variants)
+        if variant.has_error
+    }
+
+
+def _error_seed_for_variant(
+    seed_root: int,
+    variant: DatasetVariant,
+    seed_offsets: dict[DatasetVariant, int],
+) -> int | None:
+    if not variant.has_error:
+        return None
+    return seed_root + seed_offsets[variant]
+
+
+def _can_generate_variant_instance(
+    *,
+    system: Any,
+    target_step_count: int,
+    chain_seed: int,
+    error_seed: int | None,
+    variant: DatasetVariant,
+) -> bool:
+    try:
+        generate_benchmark_instance(
+            system,
+            length=target_step_count,
+            condition=variant.condition,
+            error_type=variant.error_type or ErrorType.E_RES,
+            chain_seed=chain_seed,
+            error_seed=error_seed,
+        )
+    except ValueError:
+        return False
+    return True
+
+
 def _variant_supported_by_chain(
     system: Any,
     chain: Any,
@@ -161,6 +203,7 @@ def _select_chain_seed(
     target_step_count: int,
     seed_root: int,
     variants: tuple[DatasetVariant, ...],
+    seed_offsets: dict[DatasetVariant, int],
 ) -> tuple[int, tuple[DatasetVariant, ...]]:
     best_chain_seed = seed_root + 29
     best_supported_variants: tuple[DatasetVariant, ...] = ()
@@ -172,6 +215,13 @@ def _select_chain_seed(
             variant
             for variant in variants
             if _variant_supported_by_chain(system, chain, variant)
+            and _can_generate_variant_instance(
+                system=system,
+                target_step_count=target_step_count,
+                chain_seed=chain_seed,
+                error_seed=_error_seed_for_variant(seed_root, variant, seed_offsets),
+                variant=variant,
+            )
         )
         if len(supported_variants) > len(best_supported_variants):
             best_chain_seed = chain_seed
@@ -206,17 +256,6 @@ def _example_record(
 ) -> dict[str, Any]:
     error_info = instance.error_info
     expected_error_step = error_info.step_number if error_info is not None else None
-    expected_correct_result = (
-        error_info.correct_result.emoji
-        if error_info is not None and error_info.correct_result is not None
-        else None
-    )
-    if error_info is None:
-        expected_correct_rule = None
-    elif error_info.correct_rule_used is not None:
-        expected_correct_rule = error_info.correct_rule_used
-    else:
-        expected_correct_rule = error_info.original_chain.steps[error_info.step_number - 1].rule_used
 
     return {
         "example_id": f"{dataset_name}-{example_index:06d}",
@@ -230,8 +269,6 @@ def _example_record(
         "actual_step_count": len(instance.chain.steps),
         "target_step_count": target_step_count,
         "expected_error_step": expected_error_step,
-        "expected_correct_result": expected_correct_result,
-        "expected_correct_rule": expected_correct_rule,
         "system_json": system_json,
         "system_seed": system_seed,
         "chain_seed": chain_seed,
@@ -259,6 +296,7 @@ def generate_dataset_records(
     resolved_lengths = dict(DEFAULT_TARGET_LENGTHS)
     if target_lengths is not None:
         resolved_lengths.update(target_lengths)
+    seed_offsets = _variant_seed_offsets(variants)
 
     split_records: dict[str, list[dict[str, Any]]] = {
         "train": [],
@@ -288,11 +326,12 @@ def generate_dataset_records(
                 target_step_count=target_step_count,
                 seed_root=seed_root,
                 variants=variants,
+                seed_offsets=seed_offsets,
             )
             system_json = system_to_json(system)
 
-            for variant_index, variant in enumerate(active_variants):
-                error_seed = seed_root + 101 + variant_index if variant.has_error else None
+            for variant in active_variants:
+                error_seed = _error_seed_for_variant(seed_root, variant, seed_offsets)
                 instance = generate_benchmark_instance(
                     system,
                     length=target_step_count,
@@ -401,8 +440,6 @@ def build_dataset_card(manifest: DatasetManifest, *, repo_id: str | None = None)
         "- `actual_step_count`: realized number of derivation steps\n"
         "- `target_step_count`: requested target length used during generation\n"
         "- `expected_error_step`: ground-truth step with the injected error, or null on clean rows\n"
-        "- `expected_correct_result`: correct symbol for the erroneous step, or null on clean rows\n"
-        "- `expected_correct_rule`: correct rule citation for the erroneous step, or null on clean rows\n"
         "- `system_json`: JSON serialization of the underlying formal system\n"
         "- `system_seed` / `chain_seed` / `error_seed`: generation metadata for reproducibility\n\n"
         "## Counts\n\n"

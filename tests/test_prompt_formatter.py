@@ -11,7 +11,7 @@ def test_prompt_has_all_sections():
     chain = generate_chain(system, length=5, rng=random.Random(7))
     prompt = format_benchmark_prompt(system, chain)
     assert "=== RULES ===" in prompt
-    assert "=== DERIVATION ===" in prompt
+    assert "=== YOUR WORKING OUT ===" in prompt
     assert "=== TASK ===" in prompt
 
 
@@ -97,5 +97,7 @@ def test_prompt_task_section_content():
     system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
     chain = generate_chain(system, length=3, rng=random.Random(1))
     prompt = format_benchmark_prompt(system, chain)
-    assert "Verify whether each step" in prompt
-    assert "If all steps are correct" in prompt
+    assert "your working out" in prompt
+    assert "`has_error`" in prompt
+    assert "`error_step`" in prompt
+    assert "correct result" not in prompt
