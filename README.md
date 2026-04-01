@@ -175,3 +175,19 @@ emoji_bench/
 tests/
     test_*.py         # 128 tests
 ```
+
+
+### Initial Results
+─ Worked for 1m 03s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Ran it on the Hugging Face dataset snapshot from huyxdang/emoji-bench-e-casc-200 with gpt-4.1-mini.
+
+  Results on all 200 examples:
+
+  - has_error_accuracy: 0.73
+  By difficulty:
+
+  - easy: 0.96 / 0.68 / 0.68
+  - medium: 0.68 / 0.58 / 0.58
+  - hard: 0.68 / 0.64 / 0.64
+  - expert: 0.60 / 0.54 / 0.54
