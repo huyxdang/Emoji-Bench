@@ -205,8 +205,8 @@ From easiest to hardest (predicted):
 1. `E-INV` — Invented rules are the most obvious because the model can check whether the cited operation exists.
 2. `E-RULE` — Mismatch between cited rule and computation requires cross-referencing but is fairly salient.
 3. `E-RES` — Requires looking up the operation table and checking the output.
-4. `E-OP` — Requires verifying that the operands in the step match the expression being simplified.
-5. `E-SUB` — Hardest to detect because the wrong result is "almost right."
+4. `E-OP` — Requires verifying that the operands in the step match the expression being simplified. (Deferred)
+5. `E-SUB` — Hardest to detect because the wrong result is "almost right." (Deferred)
 6. `E-CASC` — Tests whether the model catches the root error or accepts the locally-coherent cascade.
 
 This ordering is itself a hypothesis that Emoji-Bench can test empirically.
