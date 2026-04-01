@@ -4,9 +4,13 @@ import random
 from dataclasses import replace
 
 from emoji_bench.benchmark_types import ErrorInfo, ErrorType
-from emoji_bench.chain_generator import reduce_expression
+from emoji_bench.chain_generator import (
+    find_leftmost_innermost,
+    reduce_expression,
+    replace_at_path,
+)
 from emoji_bench.chain_types import ChainStep, DerivationChain
-from emoji_bench.expressions import SymbolLiteral
+from emoji_bench.expressions import Expression, SymbolLiteral
 from emoji_bench.types import FormalSystem, Symbol
 
 
@@ -27,6 +31,29 @@ def _resolve_rng(
 def _pick_wrong_symbol(correct: Symbol, symbols: tuple[Symbol, ...], rng: random.Random) -> Symbol:
     wrong_choices = [sym for sym in symbols if sym != correct]
     return rng.choice(wrong_choices)
+
+
+def _build_injected_after(step: ChainStep, injected_result: Symbol) -> Expression:
+    """Rebuild step.after with only the reduced subexpression changed."""
+    path = find_leftmost_innermost(step.before)
+    if path is None:
+        raise ValueError("Cannot inject an error into a non-reducible step")
+    return replace_at_path(step.before, path, SymbolLiteral(injected_result))
+
+
+def _reduce_from(
+    expr: Expression,
+    system: FormalSystem,
+) -> tuple[tuple[ChainStep, ...], Symbol]:
+    """Reduce an expression and return both the suffix steps and final symbol."""
+    suffix = reduce_expression(expr, system)
+    if suffix:
+        final_step = suffix[-1]
+        assert isinstance(final_step.after, SymbolLiteral)
+        return suffix, final_step.after.symbol
+
+    assert isinstance(expr, SymbolLiteral)
+    return suffix, expr.symbol
 
 
 def get_wrong_result_eligible_steps(chain: DerivationChain) -> tuple[ChainStep, ...]:
@@ -127,7 +154,7 @@ def inject_cascading_wrong_result(
     rng: random.Random | None = None,
     seed: int | None = None,
 ) -> tuple[DerivationChain, ErrorInfo]:
-    """Inject a wrong result and recompute all downstream steps from that point."""
+    """Inject a wrong result and recompute a locally valid but globally wrong suffix."""
     rng = _resolve_rng(rng=rng, seed=seed)
 
     eligible_steps = get_cascading_eligible_steps(chain)
@@ -135,32 +162,37 @@ def inject_cascading_wrong_result(
         raise ValueError("No eligible steps for cascading wrong-result injection")
 
     if step_number is None:
-        target = rng.choice(eligible_steps)
+        targets = list(eligible_steps)
+        rng.shuffle(targets)
     else:
         matches = [step for step in eligible_steps if step.step_number == step_number]
         if not matches:
             raise ValueError(
                 f"Step {step_number} is not eligible for cascading wrong-result injection"
             )
-        target = matches[0]
+        targets = matches
 
-    assert target.result_symbol is not None
+    selected: tuple[ChainStep, Symbol, Expression, tuple[ChainStep, ...], Symbol] | None = None
 
-    injected_result = _pick_wrong_symbol(target.result_symbol, system.symbols, rng)
-    injected_after = replace(
-        target.after,
-        symbol=injected_result,
-    ) if isinstance(target.after, SymbolLiteral) else None
-    if injected_after is None:
-        injected_after = SymbolLiteral(injected_result)
+    for target in targets:
+        assert target.result_symbol is not None
+        wrong_choices = [sym for sym in system.symbols if sym != target.result_symbol]
+        rng.shuffle(wrong_choices)
 
-    mutated_root = replace(
-        target,
-        result_symbol=injected_result,
-        after=injected_after,
-    )
+        for injected_result in wrong_choices:
+            injected_after = _build_injected_after(target, injected_result)
+            suffix, final_result = _reduce_from(injected_after, system)
+            if final_result != chain.final_result:
+                selected = (target, injected_result, injected_after, suffix, final_result)
+                break
 
-    suffix = reduce_expression(injected_after, system)
+    if selected is None:
+        raise ValueError("Could not inject a cascading wrong result that changes the final result")
+
+    target, injected_result, injected_after, suffix, final_result = selected
+
+    mutated_root = replace(target, result_symbol=injected_result, after=injected_after)
+
     renumbered_suffix = tuple(
         replace(step, step_number=mutated_root.step_number + idx)
         for idx, step in enumerate(suffix, start=1)
@@ -168,14 +200,6 @@ def inject_cascading_wrong_result(
 
     prefix = chain.steps[: target.step_number - 1]
     mutated_steps = prefix + (mutated_root,) + renumbered_suffix
-
-    if renumbered_suffix:
-        final_step = renumbered_suffix[-1]
-        assert isinstance(final_step.after, SymbolLiteral)
-        final_result = final_step.after.symbol
-    else:
-        assert isinstance(mutated_root.after, SymbolLiteral)
-        final_result = mutated_root.after.symbol
 
     mutated_chain = DerivationChain(
         starting_expression=chain.starting_expression,
