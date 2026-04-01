@@ -196,6 +196,8 @@ Not all errors are equivalent. Emoji-Bench categorizes injected errors into type
 | **Cascading error** | `E-CASC` | Error at step $K$; all subsequent steps are valid given the wrong result but wrong given the correct result | Step 3 is wrong, steps 4–8 are locally correct but globally wrong |
 | **Subtle off-by-one** | `E-SUB` | Swaps to an adjacent entry in the operation table — result is "close" to correct | 🦩 ⊕ 🧲 = 🦩 instead of 🪣, where 🦩 is the result of a neighboring cell |
 
+**Implementation note (current roadmap):** `E-OP` and `E-SUB` are deferred for now. Under the current prompt format, derivation steps are shown as full-expression rewrites rather than explicit local reductions, which makes these two categories weakly separable from `E-RES` in model-visible terms. Initial implementation should prioritize `E-RES`, `E-CASC`, `E-RULE`, and `E-INV`, and revisit `E-OP` / `E-SUB` after adding a prompt mode that exposes the local subexpression being reduced.
+
 ### 5.2 Difficulty Ordering
 
 From easiest to hardest (predicted):
