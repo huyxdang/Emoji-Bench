@@ -10,8 +10,10 @@ from emoji_bench.chain_generator import (
 )
 from emoji_bench.error_injector import (
     get_cascading_eligible_steps,
+    get_wrong_rule_eligible_steps,
     get_wrong_result_eligible_steps,
     inject_cascading_wrong_result,
+    inject_wrong_rule,
     inject_wrong_result,
 )
 from emoji_bench.expressions import SymbolLiteral
@@ -28,6 +30,18 @@ def test_wrong_result_eligible_steps_only_terminal_result_step():
     eligible = get_wrong_result_eligible_steps(chain)
 
     assert eligible == (chain.steps[-1],)
+
+
+def test_wrong_rule_eligible_steps_require_alternative_rules():
+    easy_system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
+    easy_chain = generate_chain(easy_system, length=3, seed=7)
+    assert get_wrong_rule_eligible_steps(easy_chain, easy_system) == ()
+
+    medium_system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    medium_chain = generate_chain(medium_system, length=6, seed=12)
+    assert get_wrong_rule_eligible_steps(medium_chain, medium_system)
 
 
 def test_inject_wrong_result_changes_only_last_step_and_final_result():
@@ -95,6 +109,66 @@ def test_inject_wrong_result_rejects_seed_and_rng_together():
 
     with pytest.raises(ValueError, match="either seed or rng"):
         inject_wrong_result(chain, system, seed=99, rng=random.Random(99))
+
+
+def test_inject_wrong_rule_changes_only_rule_metadata():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    chain = generate_chain(system, length=6, seed=12)
+
+    injected_chain, error_info = inject_wrong_rule(chain, system, seed=99)
+    changed_steps = [
+        (original, injected)
+        for original, injected in zip(chain.steps, injected_chain.steps, strict=True)
+        if original != injected
+    ]
+
+    assert len(changed_steps) == 1
+    original_step, injected_step = changed_steps[0]
+    assert injected_step.before == original_step.before
+    assert injected_step.after == original_step.after
+    assert injected_step.result_symbol == original_step.result_symbol
+    assert injected_step.rule_used != original_step.rule_used
+    assert error_info.original_chain == chain
+
+
+def test_inject_wrong_rule_records_metadata():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    chain = generate_chain(system, length=6, seed=12)
+
+    injected_chain, error_info = inject_wrong_rule(chain, system, seed=99)
+    injected_step = injected_chain.steps[error_info.step_number - 1]
+    original_step = chain.steps[error_info.step_number - 1]
+
+    assert error_info.error_type is ErrorType.E_RULE
+    assert error_info.correct_rule_used == original_step.rule_used
+    assert error_info.injected_rule_used == injected_step.rule_used
+    assert error_info.correct_rule_used != error_info.injected_rule_used
+    assert error_info.correct_result == original_step.result_symbol
+    assert error_info.injected_result == original_step.result_symbol
+    assert error_info.correct_after == original_step.after
+    assert error_info.injected_after == original_step.after
+
+
+def test_inject_wrong_rule_rejects_ineligible_system():
+    system = generate_system(n_symbols=3, n_base_ops=1, random_seed=42)
+    chain = generate_chain(system, length=3, seed=7)
+
+    with pytest.raises(ValueError, match="No eligible steps"):
+        inject_wrong_rule(chain, system, seed=99)
+
+
+def test_inject_wrong_rule_rejects_seed_and_rng_together():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    chain = generate_chain(system, length=6, seed=12)
+
+    with pytest.raises(ValueError, match="either seed or rng"):
+        inject_wrong_rule(chain, system, seed=99, rng=random.Random(99))
 
 
 def test_cascading_eligible_steps_are_non_terminal_result_steps():

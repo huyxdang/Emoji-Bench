@@ -15,6 +15,7 @@ class Condition(str, Enum):
 
 class ErrorType(str, Enum):
     E_RES = "E-RES"
+    E_RULE = "E-RULE"
     E_CASC = "E-CASC"
 
 
@@ -22,11 +23,13 @@ class ErrorType(str, Enum):
 class ErrorInfo:
     error_type: ErrorType
     step_number: int
-    correct_result: Symbol
-    injected_result: Symbol
+    correct_result: Symbol | None
+    injected_result: Symbol | None
     correct_after: Expression
     injected_after: Expression
     original_chain: DerivationChain
+    correct_rule_used: str | None = None
+    injected_rule_used: str | None = None
 
 
 @dataclass(frozen=True)

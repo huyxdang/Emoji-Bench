@@ -56,6 +56,18 @@ def _reduce_from(
     return suffix, expr.symbol
 
 
+def _available_rule_choices(system: FormalSystem) -> tuple[tuple[str, str], ...]:
+    """Return all rule labels available in a system."""
+    choices: list[tuple[str, str]] = []
+    for op in system.base_operations:
+        choices.append((f"{op.symbol_id} table", "base_op"))
+    for dop in system.derived_operations:
+        choices.append((f"definition of {dop.symbol_id}", "derived_op"))
+    for transform in system.transformations:
+        choices.append((transform.name, "transform"))
+    return tuple(choices)
+
+
 def get_wrong_result_eligible_steps(chain: DerivationChain) -> tuple[ChainStep, ...]:
     """Return steps eligible for non-cascading wrong-result injection.
 
@@ -73,6 +85,19 @@ def get_wrong_result_eligible_steps(chain: DerivationChain) -> tuple[ChainStep, 
     if not isinstance(last_step.after, SymbolLiteral):
         return ()
     return (last_step,)
+
+
+def get_wrong_rule_eligible_steps(
+    chain: DerivationChain,
+    system: FormalSystem,
+) -> tuple[ChainStep, ...]:
+    """Return steps where an existing but different rule label can be cited."""
+    available_rules = _available_rule_choices(system)
+    return tuple(
+        step
+        for step in chain.steps
+        if any(rule_used != step.rule_used for rule_used, _ in available_rules)
+    )
 
 
 def inject_wrong_result(
@@ -127,6 +152,66 @@ def inject_wrong_result(
         correct_after=target.after,
         injected_after=injected_after,
         original_chain=chain,
+    )
+    return mutated_chain, error_info
+
+
+def inject_wrong_rule(
+    chain: DerivationChain,
+    system: FormalSystem,
+    *,
+    step_number: int | None = None,
+    rng: random.Random | None = None,
+    seed: int | None = None,
+) -> tuple[DerivationChain, ErrorInfo]:
+    """Inject a wrong-rule-citation error without changing the derivation value."""
+    rng = _resolve_rng(rng=rng, seed=seed)
+
+    eligible_steps = get_wrong_rule_eligible_steps(chain, system)
+    if not eligible_steps:
+        raise ValueError("No eligible steps for wrong-rule injection")
+
+    if step_number is None:
+        target = rng.choice(eligible_steps)
+    else:
+        matches = [step for step in eligible_steps if step.step_number == step_number]
+        if not matches:
+            raise ValueError(f"Step {step_number} is not eligible for wrong-rule injection")
+        target = matches[0]
+
+    wrong_rule_choices = [
+        (rule_used, rule_type)
+        for rule_used, rule_type in _available_rule_choices(system)
+        if rule_used != target.rule_used
+    ]
+    injected_rule_used, injected_rule_type = rng.choice(wrong_rule_choices)
+
+    mutated_step = replace(
+        target,
+        rule_used=injected_rule_used,
+        rule_type=injected_rule_type,
+    )
+    mutated_steps = tuple(
+        mutated_step if step.step_number == target.step_number else step
+        for step in chain.steps
+    )
+    mutated_chain = DerivationChain(
+        starting_expression=chain.starting_expression,
+        steps=mutated_steps,
+        final_result=chain.final_result,
+        seed=chain.seed,
+    )
+
+    error_info = ErrorInfo(
+        error_type=ErrorType.E_RULE,
+        step_number=target.step_number,
+        correct_result=target.result_symbol,
+        injected_result=target.result_symbol,
+        correct_after=target.after,
+        injected_after=target.after,
+        original_chain=chain,
+        correct_rule_used=target.rule_used,
+        injected_rule_used=injected_rule_used,
     )
     return mutated_chain, error_info
 

@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from emoji_bench.benchmark_types import BenchmarkInstance, Condition, ErrorType
 from emoji_bench.chain_generator import generate_chain
-from emoji_bench.error_injector import inject_cascading_wrong_result, inject_wrong_result
+from emoji_bench.error_injector import (
+    inject_cascading_wrong_result,
+    inject_wrong_result,
+    inject_wrong_rule,
+)
 from emoji_bench.prompt_formatter import format_benchmark_prompt
 from emoji_bench.types import FormalSystem
 
@@ -37,6 +41,12 @@ def generate_benchmark_instance(
             error_seed = chain_seed + 1
         if error_type is ErrorType.E_RES:
             injected_chain, error_info = inject_wrong_result(
+                chain,
+                system,
+                seed=error_seed,
+            )
+        elif error_type is ErrorType.E_RULE:
+            injected_chain, error_info = inject_wrong_rule(
                 chain,
                 system,
                 seed=error_seed,
