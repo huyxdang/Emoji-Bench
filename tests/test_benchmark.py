@@ -48,6 +48,30 @@ def test_generate_error_benchmark_instance():
     assert instance.chain.final_result != evaluate(instance.chain.starting_expression, system)
 
 
+def test_generate_cascading_error_benchmark_instance():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    instance = generate_benchmark_instance(
+        system,
+        length=6,
+        condition=Condition.ERROR_INJECTED,
+        chain_seed=12,
+        error_type=ErrorType.E_CASC,
+        error_seed=99,
+        instance_id="casc-1",
+    )
+
+    assert instance.condition is Condition.ERROR_INJECTED
+    assert instance.has_error is True
+    assert instance.error_info is not None
+    assert instance.error_info.error_type is ErrorType.E_CASC
+    assert instance.instance_id == "casc-1"
+    assert instance.prompt == format_benchmark_prompt(system, instance.chain)
+    assert instance.chain.final_result != evaluate(instance.chain.starting_expression, system)
+    assert instance.chain.steps[:-1] != instance.error_info.original_chain.steps[:-1]
+
+
 def test_generate_error_benchmark_instance_is_deterministic():
     system = generate_system(
         n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
@@ -92,3 +116,29 @@ def test_generate_error_benchmark_instance_defaults_error_seed():
 
     assert i1.chain == i2.chain
     assert i1.error_info == i2.error_info
+
+
+def test_generate_cascading_error_benchmark_instance_is_deterministic():
+    system = generate_system(
+        n_symbols=4, n_base_ops=1, n_derived_ops=1, n_transformations=1, random_seed=77
+    )
+    i1 = generate_benchmark_instance(
+        system,
+        length=6,
+        condition=Condition.ERROR_INJECTED,
+        chain_seed=12,
+        error_type=ErrorType.E_CASC,
+        error_seed=99,
+    )
+    i2 = generate_benchmark_instance(
+        system,
+        length=6,
+        condition=Condition.ERROR_INJECTED,
+        chain_seed=12,
+        error_type=ErrorType.E_CASC,
+        error_seed=99,
+    )
+
+    assert i1.chain == i2.chain
+    assert i1.error_info == i2.error_info
+    assert i1.prompt == i2.prompt
