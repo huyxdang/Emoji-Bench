@@ -200,4 +200,37 @@ def test_evaluate_openai_script_help_runs_from_repo_checkout():
         text=True,
     )
 
-    assert "Run an OpenAI model on Emoji-Bench prompts" in result.stdout
+    assert "Run a configured OpenAI model on Emoji-Bench prompts" in result.stdout
+
+
+def test_evaluate_model_script_lists_requested_models():
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "scripts/evaluate_model.py", "--list-models"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    models = {entry["key"] for entry in json.loads(result.stdout)}
+    assert {
+        "claude-haiku-4-5",
+        "claude-sonnet-4-6",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+    }.issubset(models)
+
+
+def test_evaluate_anthropic_script_help_runs_from_repo_checkout():
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "scripts/evaluate_anthropic.py", "--help"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "Run a configured Anthropic model on Emoji-Bench prompts" in result.stdout

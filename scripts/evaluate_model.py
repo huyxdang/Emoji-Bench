@@ -13,7 +13,6 @@ from emoji_bench.eval_cli import main
 
 if __name__ == "__main__":
     main(
-        description="Run a configured OpenAI model on Emoji-Bench prompts and score has_error / error_step.",
-        allowed_providers=("openai",),
-        default_model="gpt-4.1-mini",
+        description="Run a configured OpenAI or Anthropic model on Emoji-Bench prompts and score has_error / error_step.",
+        default_model="gpt-5.4-mini",
     )

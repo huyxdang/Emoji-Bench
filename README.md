@@ -16,6 +16,12 @@ If a model can detect rule violations in a system it has never seen before, it m
 pip install -e ".[dev]"
 ```
 
+For model evaluation clients:
+
+```bash
+pip install -e ".[openai,anthropic]"
+```
+
 ```python
 from emoji_bench.generator import generate_system
 from emoji_bench.formatter import format_system_for_prompt
@@ -98,10 +104,10 @@ Currently supported error types are `E-RES`, `E-INV`, and `E-CASC`. `E-OP` and `
 - [x] Error injection for `E-RES`, `E-INV`, and `E-CASC`
 - [x] JSON round-tripping for generated formal systems
 - [x] End-to-end test coverage across generator, formatter, interpreter, chain builder, and benchmark APIs
+- [x] Evaluation runners for configured OpenAI and Anthropic models
 - [ ] Suspicious-but-correct benchmark condition
 - [ ] Rule-visibility ablation / no-rules control
 - [ ] Familiar-domain arithmetic mirror condition
-- [ ] Scoring / evaluation harness for model responses
 - [ ] Local-reduction prompt mode to support deferred `E-OP` and `E-SUB`
 
 ---
@@ -162,7 +168,32 @@ The seed makes everything deterministic and reproducible.
 pytest tests/ -v
 ```
 
-128 tests covering unit tests for each module, integration tests at all four difficulty levels, benchmark error-injection paths, and a 50-seed stress test verifying consistency across 200 generated systems.
+## Evaluating Models
+
+Emoji-Bench now includes a shared multi-provider evaluator plus provider-specific wrappers:
+
+```bash
+python scripts/evaluate_model.py --list-models
+python scripts/evaluate_openai.py artifacts/emoji-bench-mixed-2000 --model gpt-5.4-mini
+python scripts/evaluate_anthropic.py artifacts/emoji-bench-mixed-2000 --model claude-sonnet-4-6
+```
+
+Configured models currently include:
+
+- `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano` with `reasoning.effort=medium`
+- `claude-sonnet-4-6`, `claude-haiku-4-5`
+
+The model registry lives in `emoji_bench/model_registry.py`. The shared CLI is `scripts/evaluate_model.py`, and the provider-specific request handling lives in `emoji_bench/provider_eval.py`.
+
+Current evaluator defaults are intentionally small-cost:
+
+- `default_max_output_tokens=50` for all configured models
+- GPT-5.4 family models use medium reasoning by default
+- Anthropic extended thinking is supported by the configured Claude models but disabled by default
+
+As of April 2, 2026, the config values above were checked against official OpenAI and Anthropic docs while adding this integration layer.
+
+140 tests covering unit tests for each module, integration tests at all four difficulty levels, benchmark error-injection paths, evaluator/model-config coverage, and a 50-seed stress test verifying consistency across generated systems.
 
 ## Project Structure
 
@@ -183,7 +214,7 @@ emoji_bench/
     formatter.py      # JSON serialization and prompt formatting
     prompt_formatter.py # Full benchmark prompt rendering
 tests/
-    test_*.py         # 128 tests
+    test_*.py         # 140 tests
 ```
 
 
