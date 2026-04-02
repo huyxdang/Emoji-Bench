@@ -14,7 +14,7 @@ def test_select_shard_records_partitions_examples_by_stable_hash():
     ]
 
     flattened_ids = [record["example_id"] for group in shard_groups for record in group]
-    assert sorted(flattened_ids) == [record["example_id"] for record in records]
+    assert set(flattened_ids) == {record["example_id"] for record in records}
     assert len(flattened_ids) == len(set(flattened_ids))
     for shard_index, group in enumerate(shard_groups):
         assert all(
