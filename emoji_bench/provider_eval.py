@@ -29,10 +29,19 @@ PREDICTION_JSON_SCHEMA = {
 
 
 @dataclass(frozen=True)
+class ProviderUsage:
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    reasoning_tokens: int | None = None
+    total_tokens: int | None = None
+
+
+@dataclass(frozen=True)
 class ProviderResponse:
     prediction_payload: dict[str, Any]
     response_id: str | None
     raw_output_text: str
+    usage: ProviderUsage | None = None
 
 
 def build_openai_request_options(
@@ -199,6 +208,7 @@ def _request_openai_prediction(
             prediction_payload=payload,
             response_id=getattr(response, "id", None),
             raw_output_text=getattr(response, "output_text", ""),
+            usage=_extract_openai_usage(response),
         )
 
     output_text = getattr(response, "output_text", "")
@@ -207,6 +217,7 @@ def _request_openai_prediction(
             prediction_payload=json.loads(output_text),
             response_id=getattr(response, "id", None),
             raw_output_text=output_text,
+            usage=_extract_openai_usage(response),
         )
 
     raise ValueError("No structured output returned by the OpenAI model")
@@ -234,6 +245,7 @@ def _request_anthropic_prediction(
             prediction_payload=json.loads(raw_output_text),
             response_id=getattr(response, "id", None),
             raw_output_text=raw_output_text,
+            usage=_extract_anthropic_usage(response),
         )
 
     raise ValueError("No structured output returned by the Anthropic model")
@@ -256,3 +268,44 @@ def _make_prediction_model():
         error_step: int | None
 
     return ErrorCheckPrediction
+
+
+def _extract_openai_usage(response: Any) -> ProviderUsage | None:
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return None
+
+    input_tokens = getattr(usage, "input_tokens", None)
+    output_tokens = getattr(usage, "output_tokens", None)
+    total_tokens = getattr(usage, "total_tokens", None)
+    reasoning_tokens = None
+
+    output_details = getattr(usage, "output_tokens_details", None)
+    if output_details is not None:
+        reasoning_tokens = getattr(output_details, "reasoning_tokens", None)
+
+    return ProviderUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        reasoning_tokens=reasoning_tokens,
+        total_tokens=total_tokens,
+    )
+
+
+def _extract_anthropic_usage(response: Any) -> ProviderUsage | None:
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return None
+
+    input_tokens = getattr(usage, "input_tokens", None)
+    output_tokens = getattr(usage, "output_tokens", None)
+    total_tokens = None
+    if input_tokens is not None and output_tokens is not None:
+        total_tokens = input_tokens + output_tokens
+
+    return ProviderUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        reasoning_tokens=None,
+        total_tokens=total_tokens,
+    )

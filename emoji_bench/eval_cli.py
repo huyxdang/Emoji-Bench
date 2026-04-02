@@ -243,6 +243,7 @@ def main(
         last_error: Exception | None = None
         for attempt in range(1, args.max_retries + 1):
             try:
+                request_started = time.perf_counter()
                 provider_response = request_prediction(
                     client=client,
                     model_config=model_config,
@@ -251,6 +252,7 @@ def main(
                     reasoning_effort=args.reasoning_effort,
                     thinking_budget_tokens=args.thinking_budget_tokens,
                 )
+                request_latency_seconds = time.perf_counter() - request_started
                 prediction = normalize_prediction(provider_response.prediction_payload)
                 scored = score_prediction(record, prediction)
                 row = scored_prediction_to_dict(scored)
@@ -260,6 +262,12 @@ def main(
                 row["response_id"] = provider_response.response_id
                 row["raw_prediction"] = provider_response.prediction_payload
                 row["raw_output_text"] = provider_response.raw_output_text
+                row["request_latency_seconds"] = request_latency_seconds
+                usage = provider_response.usage
+                row["input_tokens"] = None if usage is None else usage.input_tokens
+                row["output_tokens"] = None if usage is None else usage.output_tokens
+                row["reasoning_tokens"] = None if usage is None else usage.reasoning_tokens
+                row["total_tokens"] = None if usage is None else usage.total_tokens
                 append_jsonl(predictions_path, row)
                 scored_records.append(row)
                 seen_example_ids.add(record["example_id"])
