@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -68,6 +69,67 @@ def _default_output_dir(input_path: Path, model_key: str) -> Path:
     return Path("artifacts") / "evals" / f"{dataset_name}-{_slugify(model_key)}"
 
 
+def _shard_label(shard_index: int, num_shards: int) -> str:
+    width = max(2, len(str(num_shards - 1)))
+    return f"shard-{shard_index:0{width}d}-of-{num_shards:0{width}d}"
+
+
+def _resolve_output_dir(
+    *,
+    raw_output_dir: str | None,
+    input_path: Path,
+    model_key: str,
+    shard_index: int,
+    num_shards: int,
+) -> Path:
+    base_output_dir = (
+        Path(raw_output_dir)
+        if raw_output_dir is not None
+        else _default_output_dir(input_path, model_key)
+    )
+    if num_shards == 1:
+        return base_output_dir
+
+    shard_dir_name = _shard_label(shard_index, num_shards)
+    if base_output_dir.name == shard_dir_name:
+        return base_output_dir
+    return base_output_dir / shard_dir_name
+
+
+def _validate_sharding_args(
+    parser: argparse.ArgumentParser,
+    *,
+    num_shards: int,
+    shard_index: int,
+) -> None:
+    if num_shards < 1:
+        parser.error("--num-shards must be >= 1")
+    if shard_index < 0:
+        parser.error("--shard-index must be >= 0")
+    if shard_index >= num_shards:
+        parser.error("--shard-index must be less than --num-shards")
+
+
+def _stable_shard_index(example_id: str, *, num_shards: int) -> int:
+    digest = hashlib.blake2b(example_id.encode("utf-8"), digest_size=8).digest()
+    return int.from_bytes(digest, "big") % num_shards
+
+
+def _select_shard_records(
+    records: list[dict[str, Any]],
+    *,
+    shard_index: int,
+    num_shards: int,
+) -> list[dict[str, Any]]:
+    if num_shards == 1:
+        return records
+    return [
+        record
+        for record in records
+        if _stable_shard_index(record["example_id"], num_shards=num_shards) == shard_index
+    ]
+
+
 def _load_existing_scores(path: Path) -> tuple[set[str], list[dict[str, Any]]]:
     if not path.exists():
         return set(), []
@@ -110,6 +172,18 @@ def build_parser(
         type=int,
         default=None,
         help="Optional maximum number of examples to evaluate.",
+    )
+    parser.add_argument(
+        "--num-shards",
+        type=int,
+        default=1,
+        help="Split the dataset into this many stable shards.",
+    )
+    parser.add_argument(
+        "--shard-index",
+        type=int,
+        default=0,
+        help="Zero-based shard index to evaluate.",
     )
     parser.add_argument(
         "--max-retries",
@@ -192,6 +266,12 @@ def main(
     if args.input_path is None:
         parser.error("input_path is required unless --list-models is used")
 
+    _validate_sharding_args(
+        parser,
+        num_shards=args.num_shards,
+        shard_index=args.shard_index,
+    )
+
     repo_root = Path(__file__).resolve().parents[1]
     _load_dotenv(repo_root / ".env")
 
@@ -214,12 +294,19 @@ def main(
     records = load_jsonl_records(input_path)
     if args.limit is not None:
         records = records[: args.limit]
+    records = _select_shard_records(
+        records,
+        shard_index=args.shard_index,
+        num_shards=args.num_shards,
+    )
 
     max_output_tokens = args.max_output_tokens or model_config.default_max_output_tokens
-    output_dir = (
-        Path(args.output_dir)
-        if args.output_dir is not None
-        else _default_output_dir(input_path, model_config.key)
+    output_dir = _resolve_output_dir(
+        raw_output_dir=args.output_dir,
+        input_path=input_path,
+        model_key=model_config.key,
+        shard_index=args.shard_index,
+        num_shards=args.num_shards,
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     predictions_path = output_dir / "predictions.jsonl"
@@ -268,6 +355,9 @@ def main(
                 row["output_tokens"] = None if usage is None else usage.output_tokens
                 row["reasoning_tokens"] = None if usage is None else usage.reasoning_tokens
                 row["total_tokens"] = None if usage is None else usage.total_tokens
+                row["num_shards"] = args.num_shards
+                row["shard_index"] = args.shard_index
+                row["shard_label"] = _shard_label(args.shard_index, args.num_shards)
                 append_jsonl(predictions_path, row)
                 scored_records.append(row)
                 seen_example_ids.add(record["example_id"])
@@ -315,6 +405,10 @@ def main(
             "input_path": str(input_path.resolve()),
             "output_dir": str(output_dir.resolve()),
             "predictions_path": str(predictions_path.resolve()),
+            "num_shards": args.num_shards,
+            "shard_index": args.shard_index,
+            "shard_label": _shard_label(args.shard_index, args.num_shards),
+            "shard_total_examples": len(records),
         }
     )
     summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

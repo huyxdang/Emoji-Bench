@@ -10,6 +10,7 @@ MAX_OUTPUT_TOKENS="${MAX_OUTPUT_TOKENS:-}"
 RETRY_DELAY_SECONDS="${RETRY_DELAY_SECONDS:-2.0}"
 MAX_RETRIES="${MAX_RETRIES:-3}"
 MODEL_PARALLELISM="${MODEL_PARALLELISM:-1}"
+SHARDS_PER_MODEL="${SHARDS_PER_MODEL:-1}"
 
 MODELS=(
   gpt-4.1-mini
@@ -24,9 +25,24 @@ if [[ "$#" -gt 0 ]]; then
   MODELS=("$@")
 fi
 
+resolve_positive_integer() {
+  local raw_value="$1"
+  local variable_name="$2"
+
+  if [[ "${raw_value}" =~ ^[0-9]+$ ]] && [[ "${raw_value}" -ge 1 ]]; then
+    echo "${raw_value}"
+    return 0
+  fi
+
+  echo "${variable_name} must be a positive integer" >&2
+  exit 1
+}
+
 resolve_parallelism() {
+  local total_jobs="$1"
+
   if [[ "${MODEL_PARALLELISM}" == "all" ]]; then
-    echo "${#MODELS[@]}"
+    echo "${total_jobs}"
     return 0
   fi
 
@@ -39,17 +55,36 @@ resolve_parallelism() {
   exit 1
 }
 
+format_job_label() {
+  local model="$1"
+  local shard_index="$2"
+  local num_shards="$3"
+
+  if [[ "${num_shards}" -le 1 ]]; then
+    echo "${model}"
+    return 0
+  fi
+
+  echo "${model} [shard $((shard_index + 1))/${num_shards}]"
+}
+
 run_model() {
   local model="$1"
+  local shard_index="$2"
+  local num_shards="$3"
+  local job_label
+  job_label="$(format_job_label "${model}" "${shard_index}" "${num_shards}")"
 
   echo
-  echo "Running model: ${model}"
+  echo "Running model: ${job_label}"
 
   cmd=(
     uv run --extra openai --extra anthropic
     python scripts/evaluate_model.py
     "${DATASET_DIR}"
     --model "${model}"
+    --num-shards "${num_shards}"
+    --shard-index "${shard_index}"
     --request-delay-seconds "${REQUEST_DELAY_SECONDS}"
     --retry-delay-seconds "${RETRY_DELAY_SECONDS}"
     --max-retries "${MAX_RETRIES}"
@@ -87,29 +122,29 @@ wait_for_slot() {
 
 collect_finished_jobs() {
   local next_pids=()
-  local next_models=()
+  local next_labels=()
 
   for idx in "${!PIDS[@]}"; do
     local pid="${PIDS[$idx]}"
-    local model="${PID_MODELS[$idx]}"
+    local job_label="${PID_LABELS[$idx]}"
 
     if kill -0 "${pid}" 2>/dev/null; then
       next_pids+=("${pid}")
-      next_models+=("${model}")
+      next_labels+=("${job_label}")
       continue
     fi
 
     if wait "${pid}"; then
-      echo "Completed model: ${model}"
+      echo "Completed model: ${job_label}"
     else
-      echo "Model failed: ${model}" >&2
+      echo "Model failed: ${job_label}" >&2
       terminate_jobs "${next_pids[@]}"
       exit 1
     fi
   done
 
   PIDS=("${next_pids[@]:-}")
-  PID_MODELS=("${next_models[@]:-}")
+  PID_LABELS=("${next_labels[@]:-}")
 }
 
 terminate_jobs() {
@@ -118,9 +153,11 @@ terminate_jobs() {
   done
 }
 
-MAX_PARALLEL="$(resolve_parallelism)"
+SHARDS_PER_MODEL_VALUE="$(resolve_positive_integer "${SHARDS_PER_MODEL}" "SHARDS_PER_MODEL")"
+TOTAL_JOBS=$(( ${#MODELS[@]} * SHARDS_PER_MODEL_VALUE ))
+MAX_PARALLEL="$(resolve_parallelism "${TOTAL_JOBS}")"
 PIDS=()
-PID_MODELS=()
+PID_LABELS=()
 
 echo "Downloading dataset ${DATASET_REPO_ID} into ${DATASET_DIR}"
 uv run --extra hf python - <<PY
@@ -133,13 +170,17 @@ snapshot_download(
 )
 PY
 
-echo "Model parallelism: ${MAX_PARALLEL}"
+echo "Shards per model: ${SHARDS_PER_MODEL_VALUE}"
+echo "Concurrent eval jobs: ${MAX_PARALLEL}"
 
 for model in "${MODELS[@]}"; do
-  wait_for_slot "${MAX_PARALLEL}"
-  run_model "${model}" &
-  PIDS+=("$!")
-  PID_MODELS+=("${model}")
+  for (( shard_index=0; shard_index<SHARDS_PER_MODEL_VALUE; shard_index++ )); do
+    local_job_label="$(format_job_label "${model}" "${shard_index}" "${SHARDS_PER_MODEL_VALUE}")"
+    wait_for_slot "${MAX_PARALLEL}"
+    run_model "${model}" "${shard_index}" "${SHARDS_PER_MODEL_VALUE}" &
+    PIDS+=("$!")
+    PID_LABELS+=("${local_job_label}")
+  done
 done
 
 while [[ "${#PIDS[@]}" -gt 0 ]]; do

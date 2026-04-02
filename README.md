@@ -270,6 +270,32 @@ LIMIT=500 MODEL_PARALLELISM=all ./scripts/run.sh
 
 Why not always run all six at once? Because the bottleneck is usually provider-side rate limits, quota, or burst capacity rather than local CPU. Running everything simultaneously is supported, but it can lead to more API throttling, longer retries, or uneven completion times across providers.
 
+### Per-Model Sharding
+
+You can also split each model run into multiple stable shards by setting `SHARDS_PER_MODEL`. Each shard writes to its own directory under the model output directory, and the reporting step aggregates them automatically.
+
+Run four shards per model with up to eight shard jobs active at once:
+
+```bash
+LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run.sh
+```
+
+If you use `MODEL_PARALLELISM=all`, it now means all model-shard jobs, not just all models:
+
+```bash
+LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=all ./scripts/run.sh
+```
+
+For manual runs, pass the shard count and zero-based shard index directly:
+
+```bash
+uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
+  artifacts/emoji-bench-mixed-2000 \
+  --model gpt-5.4-mini \
+  --num-shards 4 \
+  --shard-index 0
+```
+
 ### Reports And Analysis
 
 Every evaluator run writes per-model outputs under `artifacts/evals/...`. The reporting script aggregates those runs into machine-readable summaries plus an HTML dashboard.
