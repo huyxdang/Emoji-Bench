@@ -10,6 +10,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+# Allow direct `python scripts/...` execution from a repo checkout.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from emoji_bench.evaluation import (
     append_jsonl,
     load_jsonl_records,

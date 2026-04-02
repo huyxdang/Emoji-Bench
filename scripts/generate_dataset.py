@@ -4,8 +4,13 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 from collections import Counter
 from pathlib import Path
+
+# Allow direct `python scripts/...` execution from a repo checkout.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from emoji_bench.benchmark import generate_benchmark_instance
 from emoji_bench.formatter import system_to_json

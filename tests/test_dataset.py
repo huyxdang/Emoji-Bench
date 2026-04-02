@@ -188,3 +188,16 @@ def test_generate_dataset_script_supports_error_type_and_count(tmp_path):
     assert summary["error_type_counts"] == {"E-CASC": 8}
     assert manifest["total_examples"] == 8
     assert manifest["error_type_counts"] == {"E-CASC": 8}
+
+
+def test_evaluate_openai_script_help_runs_from_repo_checkout():
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "scripts/evaluate_openai.py", "--help"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "Run an OpenAI model on Emoji-Bench prompts" in result.stdout
