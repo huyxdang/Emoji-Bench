@@ -68,6 +68,46 @@ format_job_label() {
   echo "${model} [shard $((shard_index + 1))/${num_shards}]"
 }
 
+wait_for_jobs_to_exit() {
+  local pid
+
+  for pid in "$@"; do
+    if kill -0 "${pid}" 2>/dev/null; then
+      wait "${pid}" 2>/dev/null || true
+    fi
+  done
+}
+
+terminate_jobs() {
+  local signal="${1:-TERM}"
+  shift || true
+
+  local pid
+  for pid in "$@"; do
+    if kill -0 "${pid}" 2>/dev/null; then
+      kill "-${signal}" "${pid}" 2>/dev/null || kill "${pid}" 2>/dev/null || true
+    fi
+  done
+}
+
+handle_interrupt() {
+  local signal="$1"
+
+  if [[ "${INTERRUPTED:-0}" -eq 1 ]]; then
+    exit 130
+  fi
+
+  INTERRUPTED=1
+
+  echo
+  echo "Received ${signal}; terminating running model jobs..." >&2
+
+  terminate_jobs TERM "${PIDS[@]+"${PIDS[@]}"}"
+  wait_for_jobs_to_exit "${PIDS[@]+"${PIDS[@]}"}"
+
+  exit 130
+}
+
 run_model() {
   local model="$1"
   local shard_index="$2"
@@ -98,14 +138,14 @@ run_model() {
     cmd+=(--max-output-tokens "${MAX_OUTPUT_TOKENS}")
   fi
 
-  "${cmd[@]}"
+  exec "${cmd[@]}"
 }
 
 wait_for_slot() {
   local max_parallel="$1"
   while true; do
     local active=0
-    for pid in "${PIDS[@]:-}"; do
+    for pid in "${PIDS[@]+"${PIDS[@]}"}"; do
       if kill -0 "${pid}" 2>/dev/null; then
         active=$((active + 1))
       fi
@@ -138,19 +178,18 @@ collect_finished_jobs() {
       echo "Completed model: ${job_label}"
     else
       echo "Model failed: ${job_label}" >&2
-      terminate_jobs "${next_pids[@]}"
+      terminate_jobs TERM "${next_pids[@]+"${next_pids[@]}"}"
       exit 1
     fi
   done
 
-  PIDS=("${next_pids[@]:-}")
-  PID_LABELS=("${next_labels[@]:-}")
-}
-
-terminate_jobs() {
-  for pid in "$@"; do
-    kill "${pid}" 2>/dev/null || true
-  done
+  if [[ "${#next_pids[@]}" -gt 0 ]]; then
+    PIDS=("${next_pids[@]}")
+    PID_LABELS=("${next_labels[@]}")
+  else
+    PIDS=()
+    PID_LABELS=()
+  fi
 }
 
 SHARDS_PER_MODEL_VALUE="$(resolve_positive_integer "${SHARDS_PER_MODEL}" "SHARDS_PER_MODEL")"
@@ -158,6 +197,10 @@ TOTAL_JOBS=$(( ${#MODELS[@]} * SHARDS_PER_MODEL_VALUE ))
 MAX_PARALLEL="$(resolve_parallelism "${TOTAL_JOBS}")"
 PIDS=()
 PID_LABELS=()
+INTERRUPTED=0
+
+trap 'handle_interrupt INT' INT
+trap 'handle_interrupt TERM' TERM
 
 echo "Downloading dataset ${DATASET_REPO_ID} into ${DATASET_DIR}"
 uv run --extra hf python - <<PY
