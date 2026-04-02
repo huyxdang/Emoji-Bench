@@ -13,13 +13,13 @@ If a model can detect rule violations in a system it has never seen before, it m
 ## Quick Start
 
 ```bash
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
 
 For model evaluation clients:
 
 ```bash
-pip install -e ".[openai,anthropic]"
+uv pip install -e ".[openai,anthropic]"
 ```
 
 ```python
@@ -180,6 +180,7 @@ python scripts/evaluate_anthropic.py artifacts/emoji-bench-mixed-2000 --model cl
 
 Configured models currently include:
 
+- `gpt-4.1-mini` (non-reasoning baseline)
 - `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano` with `reasoning.effort=medium`
 - `claude-sonnet-4-6`, `claude-haiku-4-5`
 
@@ -349,16 +350,23 @@ tests/
 
 
 ### Initial Results
-─ Worked for 1m 03s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-• Ran it on the Hugging Face dataset snapshot from huyxdang/emoji-bench-e-casc-200 with gpt-4.1-mini.
+Results on the full 2,000-example `emoji-bench-mixed-2000` dataset with `gpt-4.1-mini` (non-reasoning baseline):
 
-  Results on all 200 examples:
+| Metric | Overall | Easy | Medium | Hard | Expert |
+|--------|---------|------|--------|------|--------|
+| Detection accuracy | 67.5% | 74.1% | 69.7% | 62.2% | 63.8% |
+| Joint accuracy | 49.2% | 49.9% | 51.1% | 48.6% | 47.4% |
+| Localization (error rows) | 50.9% | 59.4% | 51.1% | 46.1% | 46.9% |
+| False positive rate (clean) | 55.6% | 78.4% | 48.8% | 44.0% | 51.2% |
 
-  - has_error_accuracy: 0.73
-  By difficulty:
+By error type:
 
-  - easy: 0.96 / 0.68 / 0.68
-  - medium: 0.68 / 0.58 / 0.58
-  - hard: 0.68 / 0.64 / 0.64
-  - expert: 0.60 / 0.54 / 0.54
+| Error Type | Detection | Joint Accuracy | Localization |
+|------------|-----------|----------------|--------------|
+| Clean | 44.4% | 44.4% | -- |
+| E-RES | 77.2% | 40.0% | 51.8% |
+| E-INV | 75.6% | 50.0% | 66.1% |
+| E-CASC | 72.7% | 62.7% | 86.2% |
+
+Joint accuracy is essentially flat across difficulty levels (~47-51%), suggesting `gpt-4.1-mini` is near its floor on this task regardless of problem complexity. Stronger models may show more separation.
