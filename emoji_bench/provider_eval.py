@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import ssl
 from dataclasses import dataclass
 from typing import Any
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 from emoji_bench.model_registry import ModelConfig, ProviderName, ReasoningEffort
 
@@ -28,6 +31,8 @@ PREDICTION_JSON_SCHEMA = {
 }
 
 OPENAI_STRUCTURED_OUTPUT_RETRY_FLOOR = 200
+OPENAI_MAX_STRUCTURED_OUTPUT_RETRIES = 4
+MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"
 
 
 @dataclass(frozen=True)
@@ -44,6 +49,40 @@ class ProviderResponse:
     response_id: str | None
     raw_output_text: str
     usage: ProviderUsage | None = None
+
+
+@dataclass(frozen=True)
+class _MistralClient:
+    api_key: str
+
+    def chat_complete(self, options: dict[str, Any]) -> dict[str, Any]:
+        payload = json.dumps(options).encode("utf-8")
+        request = urllib_request.Request(
+            MISTRAL_API_URL,
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            with urllib_request.urlopen(request, context=_mistral_ssl_context()) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib_error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace").strip()
+            message = f"Mistral API request failed with status {exc.code}"
+            if body:
+                message += f": {body}"
+            raise RuntimeError(message) from exc
+
+
+def _mistral_ssl_context() -> ssl.SSLContext:
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def build_openai_request_options(
@@ -111,6 +150,24 @@ def build_anthropic_request_options(
     return options
 
 
+def build_mistral_request_options(
+    *,
+    model_config: ModelConfig,
+    prompt: str,
+    max_output_tokens: int,
+) -> dict[str, Any]:
+    return {
+        "model": model_config.api_model,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        "max_tokens": max_output_tokens,
+        "temperature": 0,
+        "response_format": {"type": "json_object"},
+    }
+
+
 def resolve_api_key(
     *,
     model_config: ModelConfig,
@@ -147,6 +204,9 @@ def make_client(provider: ProviderName, *, api_key: str) -> Any:
             ) from exc
         return Anthropic(api_key=api_key)
 
+    if provider == "mistral":
+        return _MistralClient(api_key=api_key)
+
     raise ValueError(f"Unsupported provider: {provider}")
 
 
@@ -175,6 +235,13 @@ def request_prediction(
             max_output_tokens=max_output_tokens,
             thinking_budget_tokens=thinking_budget_tokens,
         )
+    if model_config.provider == "mistral":
+        return _request_mistral_prediction(
+            client=client,
+            model_config=model_config,
+            prompt=prompt,
+            max_output_tokens=max_output_tokens,
+        )
     raise ValueError(f"Unsupported provider: {model_config.provider}")
 
 
@@ -187,35 +254,14 @@ def _request_openai_prediction(
     reasoning_effort: ReasoningEffort | None,
 ) -> ProviderResponse:
     PredictionModel = _make_prediction_model()
-    response = _openai_parse_prediction(
-        client=client,
-        model_config=model_config,
-        prompt=prompt,
-        max_output_tokens=max_output_tokens,
-        reasoning_effort=reasoning_effort,
-        prediction_model=PredictionModel,
-    )
+    current_max_output_tokens = max_output_tokens
 
-    payload = _extract_openai_prediction_payload(response)
-    if payload is not None:
-        return ProviderResponse(
-            prediction_payload=payload,
-            response_id=getattr(response, "id", None),
-            raw_output_text=_openai_output_text(response),
-            usage=_extract_openai_usage(response),
-        )
-
-    retry_max_output_tokens = _openai_retry_max_output_tokens(
-        response=response,
-        max_output_tokens=max_output_tokens,
-        model_config=model_config,
-    )
-    if retry_max_output_tokens is not None:
+    for _ in range(OPENAI_MAX_STRUCTURED_OUTPUT_RETRIES + 1):
         response = _openai_parse_prediction(
             client=client,
             model_config=model_config,
             prompt=prompt,
-            max_output_tokens=retry_max_output_tokens,
+            max_output_tokens=current_max_output_tokens,
             reasoning_effort=reasoning_effort,
             prediction_model=PredictionModel,
         )
@@ -227,6 +273,15 @@ def _request_openai_prediction(
                 raw_output_text=_openai_output_text(response),
                 usage=_extract_openai_usage(response),
             )
+
+        retry_max_output_tokens = _openai_retry_max_output_tokens(
+            response=response,
+            max_output_tokens=current_max_output_tokens,
+            model_config=model_config,
+        )
+        if retry_max_output_tokens is None:
+            break
+        current_max_output_tokens = retry_max_output_tokens
 
     raise ValueError(_openai_missing_output_error(response=response))
 
@@ -259,6 +314,31 @@ def _request_anthropic_prediction(
     raise ValueError("No structured output returned by the Anthropic model")
 
 
+def _request_mistral_prediction(
+    *,
+    client: Any,
+    model_config: ModelConfig,
+    prompt: str,
+    max_output_tokens: int,
+) -> ProviderResponse:
+    options = build_mistral_request_options(
+        model_config=model_config,
+        prompt=prompt,
+        max_output_tokens=max_output_tokens,
+    )
+    response = client.chat_complete(options)
+    raw_output_text = _mistral_output_text(response)
+    if raw_output_text:
+        return ProviderResponse(
+            prediction_payload=json.loads(raw_output_text),
+            response_id=response.get("id"),
+            raw_output_text=raw_output_text,
+            usage=_extract_mistral_usage(response),
+        )
+
+    raise ValueError("No structured output returned by the Mistral model")
+
+
 def _anthropic_text_output(response: Any) -> str:
     blocks = getattr(response, "content", None) or ()
     texts: list[str] = []
@@ -266,6 +346,28 @@ def _anthropic_text_output(response: Any) -> str:
         if getattr(block, "type", None) == "text" and hasattr(block, "text"):
             texts.append(block.text)
     return "\n".join(texts).strip()
+
+
+def _mistral_output_text(response: dict[str, Any]) -> str:
+    choices = response.get("choices") or ()
+    if not choices:
+        return ""
+
+    message = choices[0].get("message") or {}
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        texts: list[str] = []
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "text" and isinstance(block.get("text"), str):
+                text = block["text"].strip()
+                if text:
+                    texts.append(text)
+        return "\n".join(texts).strip()
+    return ""
 
 
 def _make_prediction_model():
@@ -428,4 +530,21 @@ def _extract_anthropic_usage(response: Any) -> ProviderUsage | None:
         output_tokens=output_tokens,
         reasoning_tokens=None,
         total_tokens=total_tokens,
+    )
+
+
+def _extract_mistral_usage(response: dict[str, Any]) -> ProviderUsage | None:
+    usage = response.get("usage")
+    if not isinstance(usage, dict):
+        return None
+
+    input_tokens = usage.get("prompt_tokens")
+    output_tokens = usage.get("completion_tokens")
+    total_tokens = usage.get("total_tokens")
+
+    return ProviderUsage(
+        input_tokens=input_tokens if isinstance(input_tokens, int) else None,
+        output_tokens=output_tokens if isinstance(output_tokens, int) else None,
+        reasoning_tokens=None,
+        total_tokens=total_tokens if isinstance(total_tokens, int) else None,
     )

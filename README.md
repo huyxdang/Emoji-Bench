@@ -176,6 +176,7 @@ Emoji-Bench now includes a shared multi-provider evaluator plus provider-specifi
 python scripts/evaluate_model.py --list-models
 python scripts/evaluate_openai.py artifacts/emoji-bench-mixed-2000 --model gpt-5.4-mini
 python scripts/evaluate_anthropic.py artifacts/emoji-bench-mixed-2000 --model claude-sonnet-4-6
+python scripts/evaluate_model.py artifacts/emoji-bench-mixed-2000 --model mistral-medium-2508
 ```
 
 Configured models currently include:
@@ -183,14 +184,17 @@ Configured models currently include:
 - `gpt-4.1-mini` (non-reasoning baseline)
 - `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano` with `reasoning.effort=medium`
 - `claude-sonnet-4-6`, `claude-haiku-4-5`
+- `mistral-large-2512`, `mistral-medium-2508`
 
 The model registry lives in `emoji_bench/model_registry.py`. The shared CLI is `scripts/evaluate_model.py`, and the provider-specific request handling lives in `emoji_bench/provider_eval.py`.
 
 Current evaluator defaults now favor reasoning headroom over minimum-cost runs:
 
-- `default_max_output_tokens=512` for all configured models
+- `default_max_output_tokens=512` for most configured models
+- `gpt-5.4-nano` defaults to `2048` because `512` was too small for reliable structured-output completion on Emoji-Bench
 - GPT-5.4 family models use medium reasoning by default
 - Anthropic extended thinking is supported by the configured Claude models but disabled by default
+- Mistral models use the same default token budget unless you explicitly pass `--max-output-tokens`
 
 As of April 2, 2026, the config values above were checked against official OpenAI and Anthropic docs while adding this integration layer.
 
@@ -219,11 +223,21 @@ uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
   --limit 2
 ```
 
+Mistral example:
+
+```bash
+.venv/bin/python scripts/evaluate_model.py \
+  artifacts/emoji-bench-mixed-2000 \
+  --model mistral-medium-2508 \
+  --limit 2
+```
+
 Useful overrides:
 
 - raise token budget: `--max-output-tokens 1024`
 - increase GPT-5.x reasoning: `--reasoning-effort high`
 - resume-safe repeated runs: the evaluator skips examples already present in `predictions.jsonl`
+- if you do not pass `--max-output-tokens`, the evaluator uses `default_max_output_tokens` from `emoji_bench/model_registry.py`
 
 ### Run All Models
 
@@ -233,6 +247,12 @@ Smoke test on all configured models:
 
 ```bash
 ./scripts/run.sh
+```
+
+Smoke test only the four current expansion targets:
+
+```bash
+./scripts/run.sh gpt-5.4-nano claude-sonnet-4-6 mistral-large-2512 mistral-medium-2508
 ```
 
 Run the first 500 examples instead of the full 2,000-example test split:
@@ -251,6 +271,12 @@ Run only a subset of models:
 
 ```bash
 LIMIT=500 ./scripts/run.sh gpt-5.4-mini claude-sonnet-4-6
+```
+
+Run the subset discussed here on the full dataset:
+
+```bash
+LIMIT=all ./scripts/run.sh gpt-5.4-nano claude-sonnet-4-6 mistral-large-2512 mistral-medium-2508
 ```
 
 ### Parallelism
@@ -279,6 +305,13 @@ Run four shards per model with up to eight shard jobs active at once:
 
 ```bash
 LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run.sh
+```
+
+Run four shards for the OpenAI / Anthropic / Mistral subset:
+
+```bash
+LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run.sh \
+  gpt-5.4-nano claude-sonnet-4-6 mistral-large-2512 mistral-medium-2508
 ```
 
 If you use `MODEL_PARALLELISM=all`, it now means all model-shard jobs, not just all models:

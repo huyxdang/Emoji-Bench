@@ -220,6 +220,8 @@ def test_evaluate_model_script_lists_requested_models():
         "gpt-5.4",
         "gpt-5.4-mini",
         "gpt-5.4-nano",
+        "mistral-large-2512",
+        "mistral-medium-2508",
     }.issubset(models)
 
 

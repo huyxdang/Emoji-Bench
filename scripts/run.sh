@@ -19,6 +19,8 @@ MODELS=(
   gpt-5.4-nano
   claude-sonnet-4-6
   claude-haiku-4-5
+  mistral-large-2512
+  mistral-medium-2508
 )
 
 if [[ "$#" -gt 0 ]]; then

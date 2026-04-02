@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 from typing import Literal
 
 
-ProviderName = Literal["openai", "anthropic"]
+ProviderName = Literal["openai", "anthropic", "mistral"]
 ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
 DEFAULT_MAX_OUTPUT_TOKENS = 512
@@ -84,10 +84,14 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         api_model="gpt-5.4-nano",
         docs_url="https://developers.openai.com/api/docs/models/gpt-5.4-nano",
         api_key_env_var="OPENAI_API_KEY",
-        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        default_max_output_tokens=2048,
         provider_max_output_tokens=128_000,
         openai_reasoning=OpenAIReasoningConfig(effort="medium"),
-        notes="Configured to use medium reasoning effort for evaluation runs.",
+        notes=(
+            "Configured to use medium reasoning effort for evaluation runs. "
+            "Default max output tokens is raised to 2048 because 512 is not enough "
+            "for structured-output completion reliability on Emoji-Bench."
+        ),
     ),
     "claude-sonnet-4-6": ModelConfig(
         key="claude-sonnet-4-6",
@@ -114,6 +118,34 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         notes=(
             "Anthropic's official docs list claude-haiku-4-5 as the alias and "
             "claude-haiku-4-5-20251001 as the snapshot ID."
+        ),
+    ),
+    "mistral-large-2512": ModelConfig(
+        key="mistral-large-2512",
+        label="Mistral Large 3",
+        provider="mistral",
+        api_model="mistral-large-2512",
+        docs_url="https://docs.mistral.ai/models/mistral-large-3-25-12",
+        api_key_env_var="MISTRAL_API_KEY",
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        provider_max_output_tokens=None,
+        notes=(
+            "Mistral Large 3 v25.12 supports chat completions and structured outputs "
+            "via the Chat Completions API."
+        ),
+    ),
+    "mistral-medium-2508": ModelConfig(
+        key="mistral-medium-2508",
+        label="Mistral Medium 3.1",
+        provider="mistral",
+        api_model="mistral-medium-2508",
+        docs_url="https://docs.mistral.ai/models/mistral-medium-3-1-25-08",
+        api_key_env_var="MISTRAL_API_KEY",
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        provider_max_output_tokens=None,
+        notes=(
+            "Mistral Medium 3.1 v25.08 supports chat completions and structured outputs "
+            "via the Chat Completions API."
         ),
     ),
 }

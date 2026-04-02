@@ -268,6 +268,7 @@ def summarize_prediction_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     by_model_groups: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
     by_model_difficulty_groups: defaultdict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     by_model_error_type_groups: defaultdict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    by_model_difficulty_error_type_groups: defaultdict[tuple[str, str, str], list[dict[str, Any]]] = defaultdict(list)
     by_model_expected_step_groups: defaultdict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
     by_model_step_count_groups: defaultdict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
 
@@ -275,6 +276,7 @@ def summarize_prediction_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         by_model_groups[row["model"]].append(row)
         by_model_difficulty_groups[(row["model"], row["difficulty"])].append(row)
         by_model_error_type_groups[(row["model"], row["error_type"])].append(row)
+        by_model_difficulty_error_type_groups[(row["model"], row["difficulty"], row["error_type"])].append(row)
         if row["expected_has_error"] and row["expected_error_step"] is not None:
             by_model_expected_step_groups[(row["model"], row["expected_error_step"])].append(row)
         if row["actual_step_count"] is not None:
@@ -323,6 +325,18 @@ def summarize_prediction_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         ],
         keys=("model", "actual_step_count"),
     )
+    by_model_difficulty_error_type = _sorted_group_rows(
+        [
+            {
+                "model": model,
+                "difficulty": difficulty,
+                "error_type": error_type,
+                **_compute_metrics(group_rows),
+            }
+            for (model, difficulty, error_type), group_rows in by_model_difficulty_error_type_groups.items()
+        ],
+        keys=("model", "difficulty", "error_type"),
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -332,6 +346,7 @@ def summarize_prediction_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "by_model": by_model,
         "by_model_difficulty": by_model_difficulty,
         "by_model_error_type": by_model_error_type,
+        "by_model_difficulty_error_type": by_model_difficulty_error_type,
         "by_model_expected_step": by_model_expected_step,
         "by_model_actual_step_count": by_model_actual_step_count,
     }
@@ -411,6 +426,7 @@ def write_report_artifacts(
         "by_model",
         "by_model_difficulty",
         "by_model_error_type",
+        "by_model_difficulty_error_type",
         "by_model_expected_step",
         "by_model_actual_step_count",
     ):
@@ -455,12 +471,20 @@ def _render_table(headers: list[str], rows: list[list[str]]) -> str:
 
 
 def _metric_color(value: float | None) -> str:
+    """Red-amber-green diverging scale: 0.0 → red, 0.5 → amber, 1.0 → green."""
     if value is None:
-        return "#f2f2f2"
+        return "#f5f5f5"
     bounded = max(0.0, min(1.0, value))
-    red = int(245 - 110 * bounded)
-    green = int(228 - 58 * bounded)
-    blue = int(230 - 140 * bounded)
+    if bounded < 0.5:
+        t = bounded / 0.5
+        red = int(220 - 30 * t)
+        green = int(90 + 100 * t)
+        blue = int(80 - 10 * t)
+    else:
+        t = (bounded - 0.5) / 0.5
+        red = int(190 - 120 * t)
+        green = int(190 + 25 * t)
+        blue = int(70 + 40 * t)
     return f"rgb({red}, {green}, {blue})"
 
 
@@ -700,8 +724,103 @@ def _render_line_chart(
     return "".join(parts)
 
 
+def _render_stat_card(label: str, value: str, subtitle: str = "") -> str:
+    subtitle_html = f'<div class="stat-subtitle">{escape(subtitle)}</div>' if subtitle else ""
+    return (
+        f'<div class="stat-card">'
+        f'<div class="stat-value">{value}</div>'
+        f'<div class="stat-label">{escape(label)}</div>'
+        f'{subtitle_html}'
+        f'</div>'
+    )
+
+
+def _render_html_heatmap_table(
+    title: str,
+    subtitle: str,
+    rows: list[dict[str, Any]],
+    *,
+    row_key: str,
+    column_key: str,
+    metric_key: str,
+    row_order: list[Any] | None = None,
+    column_order: list[Any] | None = None,
+) -> str:
+    if not rows:
+        return ""
+
+    row_values = row_order or sorted({row[row_key] for row in rows})
+    column_values = column_order or sorted({row[column_key] for row in rows})
+    cell_map = {
+        (row[row_key], row[column_key]): row.get(metric_key)
+        for row in rows
+    }
+
+    header_cells = "".join(
+        f'<th class="ht-col-header">{escape(str(col))}</th>' for col in column_values
+    )
+    body_rows: list[str] = []
+    for rv in row_values:
+        cells = [f'<td class="ht-row-header">{escape(str(rv))}</td>']
+        for cv in column_values:
+            val = cell_map.get((rv, cv))
+            color = _metric_color(val if isinstance(val, float) else None)
+            label = "n/a" if val is None else f"{val * 100:.0f}%"
+            cells.append(
+                f'<td class="ht-cell" style="background:{color};">{label}</td>'
+            )
+        body_rows.append(f'<tr>{"".join(cells)}</tr>')
+
+    subtitle_html = f'<p class="section-subtitle">{escape(subtitle)}</p>' if subtitle else ""
+
+    return (
+        f'<h2>{escape(title)}</h2>'
+        f'{subtitle_html}'
+        f'<table class="heatmap-table">'
+        f'<thead><tr><th></th>{header_cells}</tr></thead>'
+        f'<tbody>{"".join(body_rows)}</tbody>'
+        f'</table>'
+    )
+
+
 def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str:
     overall = report["overall"]
+
+    # --- stat cards ---
+    stat_cards = "".join([
+        _render_stat_card(
+            "Detection Accuracy",
+            _format_metric(overall["detection_accuracy"], percent=True),
+            "Did the model correctly say error / no error?",
+        ),
+        _render_stat_card(
+            "Step Accuracy (Joint)",
+            _format_metric(overall["joint_accuracy"], percent=True),
+            "Correct detection AND correct step identified",
+        ),
+        _render_stat_card(
+            "Step ID on Error Rows",
+            _format_metric(overall["localization_accuracy_on_error_rows"], percent=True),
+            "Among errors: was the right step found?",
+        ),
+        _render_stat_card(
+            "False Positive Rate",
+            _format_metric(overall["false_positive_rate_clean"], percent=True),
+            "Clean examples wrongly flagged as errors",
+        ),
+        _render_stat_card(
+            "Precision",
+            _format_metric(overall["detection_precision"], percent=True),
+            'Of predictions saying "error", how many were right?',
+        ),
+        _render_stat_card(
+            "Recall",
+            _format_metric(overall["detection_recall"], percent=True),
+            "Of actual errors, how many were caught?",
+        ),
+    ])
+
+    # --- by model table ---
     overview_rows = [
         [
             escape(row["model"]),
@@ -709,81 +828,102 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
             _format_metric(row["joint_accuracy"], percent=True),
             _format_metric(row["localization_accuracy_on_error_rows"], percent=True),
             _format_metric(row["false_positive_rate_clean"], percent=True),
-            _format_metric(row["latency_mean_seconds"]),
-            _format_metric(row["total_tokens_mean"]),
+            f'{row["latency_mean_seconds"]:.2f}' if row.get("latency_mean_seconds") is not None else "n/a",
+            str(int(row["total_tokens_mean"])) if row.get("total_tokens_mean") is not None else "n/a",
         ]
         for row in report["by_model"]
     ]
-
-    by_model_difficulty = report["by_model_difficulty"]
-    difficulty_rows = [row for row in by_model_difficulty]
-    error_type_rows = [row for row in report["by_model_error_type"]]
-    step_rows = [row for row in report["by_model_expected_step"]]
-
     overview_table = _render_table(
         [
             "Model",
             "Detection",
-            "Joint",
-            "Localization",
-            "Clean FPR",
-            "Mean Latency (s)",
-            "Mean Tokens",
+            "Step Accuracy",
+            "Step ID (errors)",
+            "False Pos. Rate",
+            "Latency (s)",
+            "Tokens",
         ],
         overview_rows,
     )
 
-    summary_cards = _render_table(
-        ["Metric", "Value"],
-        [
-            ["Total rows", str(report["total_rows"])],
-            ["Detection accuracy", _format_metric(overall["detection_accuracy"], percent=True)],
-            ["Joint accuracy", _format_metric(overall["joint_accuracy"], percent=True)],
-            [
-                "Localization on error rows",
-                _format_metric(overall["localization_accuracy_on_error_rows"], percent=True),
-            ],
-            ["False positive rate on clean rows", _format_metric(overall["false_positive_rate_clean"], percent=True)],
-            ["False negative rate on error rows", _format_metric(overall["false_negative_rate_error"], percent=True)],
+    # --- bar chart ---
+    bar_chart = _render_bar_chart(
+        "Accuracy By Model",
+        report["by_model"],
+        metrics=[
+            ("detection_accuracy", "Detection"),
+            ("joint_accuracy", "Step Accuracy"),
+            ("localization_accuracy_on_error_rows", "Step ID (errors)"),
         ],
     )
 
-    charts = [
-        _render_bar_chart(
-            "Accuracy By Model",
-            report["by_model"],
-            metrics=[
-                ("detection_accuracy", "Detection"),
-                ("joint_accuracy", "Joint"),
-                ("localization_accuracy_on_error_rows", "Localization"),
-            ],
-        ),
-        _render_heatmap(
-            "Joint Accuracy By Difficulty",
-            difficulty_rows,
-            row_key="difficulty",
-            column_key="model",
-            metric_key="joint_accuracy",
-            row_order=["easy", "medium", "hard", "expert"],
-            column_order=report["models"],
-        ),
-        _render_heatmap(
-            "Joint Accuracy By Error Type",
-            error_type_rows,
-            row_key="error_type",
-            column_key="model",
-            metric_key="joint_accuracy",
-            row_order=["clean", "E-RES", "E-INV", "E-CASC"],
-            column_order=report["models"],
-        ),
-        _render_line_chart(
-            "Localization By True Error Step",
-            step_rows,
-            x_key="expected_error_step",
-            y_key="localization_accuracy_on_error_rows",
-            series_key="model",
-        ),
-    ]
+    # --- heatmaps as HTML tables ---
+    difficulty_rows = list(report["by_model_difficulty"])
+    error_type_rows = list(report["by_model_error_type"])
+    difficulty_error_type_rows = list(report.get("by_model_difficulty_error_type", []))
+    step_rows = list(report["by_model_expected_step"])
+
+    difficulty_heatmap = _render_html_heatmap_table(
+        "Step Accuracy by Difficulty",
+        "Does accuracy drop as problems get harder?",
+        difficulty_rows,
+        row_key="difficulty",
+        column_key="model",
+        metric_key="joint_accuracy",
+        row_order=["easy", "medium", "hard", "expert"],
+        column_order=report["models"],
+    )
+
+    error_type_heatmap = _render_html_heatmap_table(
+        "Step Accuracy by Error Type",
+        "Which error types are easiest/hardest to catch?",
+        error_type_rows,
+        row_key="error_type",
+        column_key="model",
+        metric_key="joint_accuracy",
+        row_order=["clean", "E-RES", "E-INV", "E-CASC"],
+        column_order=report["models"],
+    )
+
+    line_chart = _render_line_chart(
+        "Step ID Accuracy by True Error Step",
+        step_rows,
+        x_key="expected_error_step",
+        y_key="localization_accuracy_on_error_rows",
+        series_key="model",
+    )
+
+    # --- per-model cross tables ---
+    cross_tables_html = ""
+    if difficulty_error_type_rows:
+        for model in report["models"]:
+            model_rows = [r for r in difficulty_error_type_rows if r["model"] == model]
+            if not model_rows:
+                continue
+            cross_tables_html += (
+                f'<section class="panel">'
+                + _render_html_heatmap_table(
+                    f"Detection: Difficulty x Error Type",
+                    f"{model} — did the model detect the error at all?",
+                    model_rows,
+                    row_key="difficulty",
+                    column_key="error_type",
+                    metric_key="detection_accuracy",
+                    row_order=["easy", "medium", "hard", "expert"],
+                    column_order=["clean", "E-RES", "E-INV", "E-CASC"],
+                )
+                + _render_html_heatmap_table(
+                    f"Step Accuracy: Difficulty x Error Type",
+                    f"{model} — correct detection AND correct step",
+                    model_rows,
+                    row_key="difficulty",
+                    column_key="error_type",
+                    metric_key="joint_accuracy",
+                    row_order=["easy", "medium", "hard", "expert"],
+                    column_order=["clean", "E-RES", "E-INV", "E-CASC"],
+                )
+                + "</section>"
+            )
 
     input_items = "".join(f"<li>{escape(path)}</li>" for path in input_paths)
 
@@ -804,7 +944,7 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: var(--ink);
       background:
         radial-gradient(circle at top left, #fff7df 0, transparent 28%),
@@ -815,22 +955,65 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
       margin: 0 auto;
       padding: 32px 24px 48px;
     }}
-    h1, h2 {{
-      margin: 0 0 12px;
+    h1 {{
+      margin: 0 0 8px;
+      font-weight: 800;
+      font-size: 28px;
+      letter-spacing: -0.01em;
+    }}
+    h2 {{
+      margin: 0 0 8px;
       font-weight: 700;
-      letter-spacing: 0.01em;
+      font-size: 18px;
     }}
     p, li {{
       color: var(--muted);
       line-height: 1.5;
+      font-size: 14px;
+    }}
+    .section-subtitle {{
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 12px;
     }}
     .panel {{
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 18px;
-      padding: 18px 20px;
+      padding: 20px 24px;
       margin-top: 18px;
       box-shadow: 0 10px 30px rgba(84, 57, 36, 0.06);
+    }}
+    .stat-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }}
+    .stat-card {{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+      text-align: center;
+    }}
+    .stat-value {{
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }}
+    .stat-label {{
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-top: 6px;
+    }}
+    .stat-subtitle {{
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.3;
     }}
     .grid {{
       display: grid;
@@ -842,7 +1025,7 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
       border-collapse: collapse;
     }}
     th, td {{
-      padding: 10px 12px;
+      padding: 10px 14px;
       border-bottom: 1px solid #ece3d8;
       text-align: left;
       font-size: 14px;
@@ -850,9 +1033,46 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
     th {{
       color: var(--ink);
       font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }}
     td {{
       color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }}
+    .heatmap-table {{
+      border-collapse: separate;
+      border-spacing: 4px;
+      width: auto;
+    }}
+    .heatmap-table th {{
+      text-transform: none;
+      letter-spacing: normal;
+      font-size: 13px;
+      padding: 6px 12px;
+    }}
+    .heatmap-table .ht-col-header {{
+      text-align: center;
+      font-weight: 600;
+    }}
+    .heatmap-table .ht-row-header {{
+      font-weight: 600;
+      color: var(--ink);
+      border: none;
+      padding: 8px 14px 8px 0;
+      text-align: right;
+    }}
+    .heatmap-table .ht-cell {{
+      text-align: center;
+      font-weight: 700;
+      font-size: 15px;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      min-width: 72px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }}
     svg {{
       width: 100%;
@@ -862,6 +1082,7 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
       border: 1px solid #ece3d8;
       border-radius: 14px;
       padding: 6px;
+      margin-top: 12px;
     }}
     .chart-title {{
       font-size: 16px;
@@ -886,10 +1107,11 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
     }}
     .lede {{
       max-width: 72ch;
+      margin: 0 0 6px;
     }}
     .badge {{
       display: inline-block;
-      padding: 4px 8px;
+      padding: 4px 10px;
       border-radius: 999px;
       background: #f2e1d0;
       color: var(--accent);
@@ -900,37 +1122,58 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
     ul {{
       margin: 8px 0 0 18px;
     }}
+    details {{
+      margin-top: 12px;
+    }}
+    details summary {{
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+    }}
   </style>
 </head>
 <body>
   <main>
     <div class="badge">Emoji-Bench Eval Report</div>
-    <h1>Model Comparison Dashboard</h1>
+    <h1>Evaluation Results</h1>
     <p class="lede">
-      This report summarizes detection, localization, and cost/latency tradeoffs across one or more evaluation runs.
-      It focuses on metrics that matter for Emoji-Bench specifically: finding whether an error exists, then finding the first wrong step.
+      {report["total_rows"]:,} examples evaluated across {len(report["models"])} model{"s" if len(report["models"]) != 1 else ""}.
     </p>
 
-    <div class="grid">
-      <section class="panel">
-        <h2>Overview</h2>
-        {summary_cards}
-      </section>
-      <section class="panel">
-        <h2>Inputs</h2>
-        <ul>{input_items}</ul>
-      </section>
-    </div>
+    <section class="panel">
+      <h2>Key Metrics</h2>
+      <div class="stat-grid">
+        {stat_cards}
+      </div>
+    </section>
 
     <section class="panel">
       <h2>By Model</h2>
       {overview_table}
+      {bar_chart}
     </section>
 
     <section class="panel">
-      <h2>Charts</h2>
-      {''.join(chart for chart in charts if chart)}
+      {difficulty_heatmap}
     </section>
+
+    <section class="panel">
+      {error_type_heatmap}
+    </section>
+
+    {cross_tables_html}
+
+    <section class="panel">
+      <h2>Step ID Accuracy by Position</h2>
+      <p class="section-subtitle">How does accuracy change depending on which step the error is at?</p>
+      {line_chart}
+    </section>
+
+    <details>
+      <summary>Input files ({len(input_paths)})</summary>
+      <ul>{input_items}</ul>
+    </details>
   </main>
 </body>
 </html>

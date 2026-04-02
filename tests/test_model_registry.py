@@ -8,6 +8,7 @@ from emoji_bench.provider_eval import (
     PREDICTION_JSON_SCHEMA,
     SYSTEM_PROMPT,
     build_anthropic_request_options,
+    build_mistral_request_options,
     build_openai_request_options,
     resolve_api_key,
 )
@@ -20,6 +21,8 @@ def test_requested_model_configs_are_present():
         "gpt-5.4",
         "gpt-5.4-mini",
         "gpt-5.4-nano",
+        "mistral-large-2512",
+        "mistral-medium-2508",
     }.issubset(set(model_choices()))
 
 
@@ -29,13 +32,16 @@ def test_gpt54_models_default_to_medium_reasoning():
         assert config.provider == "openai"
         assert config.openai_reasoning is not None
         assert config.openai_reasoning.effort == "medium"
-        assert config.default_max_output_tokens == DEFAULT_MAX_OUTPUT_TOKENS
+    assert get_model_config("gpt-5.4").default_max_output_tokens == DEFAULT_MAX_OUTPUT_TOKENS
+    assert get_model_config("gpt-5.4-mini").default_max_output_tokens == DEFAULT_MAX_OUTPUT_TOKENS
+    assert get_model_config("gpt-5.4-nano").default_max_output_tokens == 2048
 
 
-def test_all_configured_models_default_to_512_max_output_tokens():
+def test_all_configured_models_use_expected_default_max_output_tokens():
     assert DEFAULT_MAX_OUTPUT_TOKENS == 512
     for config in MODEL_CONFIGS.values():
-        assert config.default_max_output_tokens == DEFAULT_MAX_OUTPUT_TOKENS
+        expected = 2048 if config.key == "gpt-5.4-nano" else DEFAULT_MAX_OUTPUT_TOKENS
+        assert config.default_max_output_tokens == expected
 
 
 def test_build_openai_request_options_uses_reasoning_config():
@@ -84,6 +90,22 @@ def test_build_anthropic_request_options_rejects_invalid_thinking_budget():
         assert "less than max_output_tokens" in str(exc)
     else:  # pragma: no cover - defensive
         raise AssertionError("expected invalid Anthropic thinking budget to fail")
+
+
+def test_build_mistral_request_options_uses_json_mode():
+    config = get_model_config("mistral-large-2512")
+    options = build_mistral_request_options(
+        model_config=config,
+        prompt="example prompt",
+        max_output_tokens=77,
+    )
+
+    assert options["model"] == "mistral-large-2512"
+    assert options["max_tokens"] == 77
+    assert options["temperature"] == 0
+    assert options["response_format"] == {"type": "json_object"}
+    assert options["messages"][0] == {"role": "system", "content": SYSTEM_PROMPT}
+    assert options["messages"][1] == {"role": "user", "content": "example prompt"}
 
 
 def test_resolve_api_key_uses_provider_specific_env_var():
