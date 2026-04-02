@@ -193,6 +193,110 @@ Current evaluator defaults now favor reasoning headroom over minimum-cost runs:
 
 As of April 2, 2026, the config values above were checked against official OpenAI and Anthropic docs while adding this integration layer.
 
+### Download The Evaluation Dataset
+
+```bash
+uv run --extra hf python - <<'PY'
+from huggingface_hub import snapshot_download
+
+snapshot_download(
+    repo_id="huyxdang/emoji-bench-mixed-2000",
+    repo_type="dataset",
+    local_dir="artifacts/emoji-bench-mixed-2000",
+)
+PY
+```
+
+After download, the evaluator can point at the directory directly; it will read `test.jsonl` from there.
+
+### Run One Model
+
+```bash
+uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
+  artifacts/emoji-bench-mixed-2000 \
+  --model gpt-5.4-mini \
+  --limit 2
+```
+
+Useful overrides:
+
+- raise token budget: `--max-output-tokens 1024`
+- increase GPT-5.x reasoning: `--reasoning-effort high`
+- resume-safe repeated runs: the evaluator skips examples already present in `predictions.jsonl`
+
+### Run All Models
+
+Use the wrapper at [`scripts/run.sh`](scripts/run.sh).
+
+Smoke test on all configured models:
+
+```bash
+./scripts/run.sh
+```
+
+Run the first 500 examples instead of the full 2,000-example test split:
+
+```bash
+LIMIT=500 ./scripts/run.sh
+```
+
+Run the full dataset:
+
+```bash
+LIMIT=all ./scripts/run.sh
+```
+
+Run only a subset of models:
+
+```bash
+LIMIT=500 ./scripts/run.sh gpt-5.4-mini claude-sonnet-4-6
+```
+
+### Parallelism
+
+By default, [`scripts/run.sh`](scripts/run.sh) runs models sequentially. You can parallelize across models by setting `MODEL_PARALLELISM`.
+
+Run two model processes at a time:
+
+```bash
+LIMIT=500 MODEL_PARALLELISM=2 ./scripts/run.sh
+```
+
+Run all configured models simultaneously:
+
+```bash
+LIMIT=500 MODEL_PARALLELISM=all ./scripts/run.sh
+```
+
+Why not always run all six at once? Because the bottleneck is usually provider-side rate limits, quota, or burst capacity rather than local CPU. Running everything simultaneously is supported, but it can lead to more API throttling, longer retries, or uneven completion times across providers.
+
+### Reports And Analysis
+
+Every evaluator run writes per-model outputs under `artifacts/evals/...`. The reporting script aggregates those runs into machine-readable summaries plus an HTML dashboard.
+
+Build a combined report manually:
+
+```bash
+python3 scripts/analyze_evals.py artifacts/evals --output-dir artifacts/eval-report
+```
+
+The report includes:
+
+- detection metrics: accuracy, precision, recall, F1, clean false-positive rate, error false-negative rate
+- localization metrics: joint accuracy, exact step accuracy on error rows, step accuracy when an error was detected, mean absolute step distance, within-one-step rate, off-by-one rate
+- slice analysis: by model, difficulty, error type, expected error step, and actual step count
+- operational metrics: latency and token usage when the provider returns them
+
+Artifacts:
+
+- `summary.json`
+- `by_model.csv`
+- `by_model_difficulty.csv`
+- `by_model_error_type.csv`
+- `by_model_expected_step.csv`
+- `by_model_actual_step_count.csv`
+- `report.html`
+
 140 tests covering unit tests for each module, integration tests at all four difficulty levels, benchmark error-injection paths, evaluator/model-config coverage, and a 50-seed stress test verifying consistency across generated systems.
 
 ## Project Structure
