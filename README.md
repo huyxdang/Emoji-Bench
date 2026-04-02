@@ -216,6 +216,18 @@ After download, the evaluator can point at the directory directly; it will read 
 
 ### Run One Model
 
+GPT-5.4 full-dataset example:
+
+```bash
+uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
+  artifacts/emoji-bench-mixed-2000 \
+  --model gpt-5.4
+```
+
+Add `--limit 2` if you just want a smoke test.
+
+GPT-5.4 mini example:
+
 ```bash
 uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
   artifacts/emoji-bench-mixed-2000 \
@@ -247,6 +259,12 @@ Smoke test on all configured models:
 
 ```bash
 ./scripts/run.sh
+```
+
+From another terminal, gracefully stop the current running `bash` process for the wrapper:
+
+```bash
+pkill -TERM -f 'scripts/run\.sh'
 ```
 
 Smoke test only the four current expansion targets:
@@ -334,11 +352,13 @@ uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
 
 Every evaluator run writes per-model outputs under `artifacts/evals/...`. The reporting script aggregates those runs into machine-readable summaries plus an HTML dashboard.
 
-Build a combined report manually:
+Run `scripts/analyze_evals.py` from the repo root to build a combined report. By default it writes to `artifacts/eval-report`:
 
 ```bash
-python3 scripts/analyze_evals.py artifacts/evals --output-dir artifacts/eval-report
+python3 scripts/analyze_evals.py artifacts/evals
 ```
+
+Pass `--output-dir` if you want the report written somewhere else.
 
 The report includes:
 
