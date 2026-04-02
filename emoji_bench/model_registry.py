@@ -7,6 +7,8 @@ from typing import Literal
 ProviderName = Literal["openai", "anthropic"]
 ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
+DEFAULT_MAX_OUTPUT_TOKENS = 512
+
 
 @dataclass(frozen=True)
 class OpenAIReasoningConfig:
@@ -47,7 +49,7 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         api_model="gpt-4.1-mini",
         docs_url="https://developers.openai.com/api/docs/models",
         api_key_env_var="OPENAI_API_KEY",
-        default_max_output_tokens=50,
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
         provider_max_output_tokens=None,
         notes="Legacy non-reasoning baseline kept for backward compatibility.",
     ),
@@ -58,7 +60,7 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         api_model="gpt-5.4",
         docs_url="https://developers.openai.com/api/docs/models/gpt-5.4",
         api_key_env_var="OPENAI_API_KEY",
-        default_max_output_tokens=50,
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
         provider_max_output_tokens=128_000,
         openai_reasoning=OpenAIReasoningConfig(effort="medium"),
         notes="Configured to use medium reasoning effort for evaluation runs.",
@@ -70,7 +72,7 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         api_model="gpt-5.4-mini",
         docs_url="https://developers.openai.com/api/docs/models/gpt-5.4-mini",
         api_key_env_var="OPENAI_API_KEY",
-        default_max_output_tokens=50,
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
         provider_max_output_tokens=128_000,
         openai_reasoning=OpenAIReasoningConfig(effort="medium"),
         notes="Configured to use medium reasoning effort for evaluation runs.",
@@ -82,7 +84,7 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         api_model="gpt-5.4-nano",
         docs_url="https://developers.openai.com/api/docs/models/gpt-5.4-nano",
         api_key_env_var="OPENAI_API_KEY",
-        default_max_output_tokens=50,
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
         provider_max_output_tokens=128_000,
         openai_reasoning=OpenAIReasoningConfig(effort="medium"),
         notes="Configured to use medium reasoning effort for evaluation runs.",
@@ -94,7 +96,7 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         api_model="claude-sonnet-4-6",
         docs_url="https://platform.claude.com/docs/en/about-claude/models/overview",
         api_key_env_var="ANTHROPIC_API_KEY",
-        default_max_output_tokens=50,
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
         provider_max_output_tokens=64_000,
         anthropic_thinking=AnthropicThinkingConfig(enabled=False),
         notes="Extended thinking is supported by the model, but disabled by default in this evaluator.",
@@ -106,7 +108,7 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         api_model="claude-haiku-4-5",
         docs_url="https://platform.claude.com/docs/en/about-claude/models/overview",
         api_key_env_var="ANTHROPIC_API_KEY",
-        default_max_output_tokens=50,
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
         provider_max_output_tokens=64_000,
         anthropic_thinking=AnthropicThinkingConfig(enabled=False),
         notes=(

@@ -185,9 +185,9 @@ Configured models currently include:
 
 The model registry lives in `emoji_bench/model_registry.py`. The shared CLI is `scripts/evaluate_model.py`, and the provider-specific request handling lives in `emoji_bench/provider_eval.py`.
 
-Current evaluator defaults are intentionally small-cost:
+Current evaluator defaults now favor reasoning headroom over minimum-cost runs:
 
-- `default_max_output_tokens=50` for all configured models
+- `default_max_output_tokens=512` for all configured models
 - GPT-5.4 family models use medium reasoning by default
 - Anthropic extended thinking is supported by the configured Claude models but disabled by default
 

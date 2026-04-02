@@ -27,6 +27,8 @@ PREDICTION_JSON_SCHEMA = {
     "additionalProperties": False,
 }
 
+OPENAI_STRUCTURED_OUTPUT_RETRY_FLOOR = 200
+
 
 @dataclass(frozen=True)
 class ProviderUsage:
@@ -185,42 +187,48 @@ def _request_openai_prediction(
     reasoning_effort: ReasoningEffort | None,
 ) -> ProviderResponse:
     PredictionModel = _make_prediction_model()
-    options = build_openai_request_options(
+    response = _openai_parse_prediction(
+        client=client,
         model_config=model_config,
         prompt=prompt,
         max_output_tokens=max_output_tokens,
         reasoning_effort=reasoning_effort,
-    )
-    response = client.responses.parse(
-        text_format=PredictionModel,
-        **options,
+        prediction_model=PredictionModel,
     )
 
-    parsed = getattr(response, "output_parsed", None)
-    if parsed is not None:
-        if hasattr(parsed, "model_dump"):
-            payload = parsed.model_dump()
-        elif hasattr(parsed, "dict"):
-            payload = parsed.dict()
-        else:
-            payload = dict(parsed)
+    payload = _extract_openai_prediction_payload(response)
+    if payload is not None:
         return ProviderResponse(
             prediction_payload=payload,
             response_id=getattr(response, "id", None),
-            raw_output_text=getattr(response, "output_text", ""),
+            raw_output_text=_openai_output_text(response),
             usage=_extract_openai_usage(response),
         )
 
-    output_text = getattr(response, "output_text", "")
-    if output_text:
-        return ProviderResponse(
-            prediction_payload=json.loads(output_text),
-            response_id=getattr(response, "id", None),
-            raw_output_text=output_text,
-            usage=_extract_openai_usage(response),
+    retry_max_output_tokens = _openai_retry_max_output_tokens(
+        response=response,
+        max_output_tokens=max_output_tokens,
+        model_config=model_config,
+    )
+    if retry_max_output_tokens is not None:
+        response = _openai_parse_prediction(
+            client=client,
+            model_config=model_config,
+            prompt=prompt,
+            max_output_tokens=retry_max_output_tokens,
+            reasoning_effort=reasoning_effort,
+            prediction_model=PredictionModel,
         )
+        payload = _extract_openai_prediction_payload(response)
+        if payload is not None:
+            return ProviderResponse(
+                prediction_payload=payload,
+                response_id=getattr(response, "id", None),
+                raw_output_text=_openai_output_text(response),
+                usage=_extract_openai_usage(response),
+            )
 
-    raise ValueError("No structured output returned by the OpenAI model")
+    raise ValueError(_openai_missing_output_error(response=response))
 
 
 def _request_anthropic_prediction(
@@ -268,6 +276,118 @@ def _make_prediction_model():
         error_step: int | None
 
     return ErrorCheckPrediction
+
+
+def _openai_parse_prediction(
+    *,
+    client: Any,
+    model_config: ModelConfig,
+    prompt: str,
+    max_output_tokens: int,
+    reasoning_effort: ReasoningEffort | None,
+    prediction_model: type[Any],
+) -> Any:
+    options = build_openai_request_options(
+        model_config=model_config,
+        prompt=prompt,
+        max_output_tokens=max_output_tokens,
+        reasoning_effort=reasoning_effort,
+    )
+    return client.responses.parse(
+        text_format=prediction_model,
+        **options,
+    )
+
+
+def _extract_openai_prediction_payload(response: Any) -> dict[str, Any] | None:
+    parsed = getattr(response, "output_parsed", None)
+    if parsed is not None:
+        return _coerce_parsed_payload(parsed)
+
+    for output in getattr(response, "output", ()) or ():
+        if getattr(output, "type", None) != "message":
+            continue
+        for content in getattr(output, "content", ()) or ():
+            parsed = getattr(content, "parsed", None)
+            if parsed is not None:
+                return _coerce_parsed_payload(parsed)
+
+    output_text = _openai_output_text(response)
+    if output_text:
+        return json.loads(output_text)
+
+    return None
+
+
+def _coerce_parsed_payload(parsed: Any) -> dict[str, Any]:
+    if hasattr(parsed, "model_dump"):
+        return parsed.model_dump()
+    if hasattr(parsed, "dict"):
+        return parsed.dict()
+    return dict(parsed)
+
+
+def _openai_output_text(response: Any) -> str:
+    direct_output_text = getattr(response, "output_text", "")
+    if direct_output_text:
+        return direct_output_text
+
+    parts: list[str] = []
+    for output in getattr(response, "output", ()) or ():
+        if getattr(output, "type", None) != "message":
+            continue
+        for content in getattr(output, "content", ()) or ():
+            if getattr(content, "type", None) == "output_text" and hasattr(content, "text"):
+                text = content.text.strip()
+                if text:
+                    parts.append(text)
+    return "\n".join(parts).strip()
+
+
+def _openai_retry_max_output_tokens(
+    *,
+    response: Any,
+    max_output_tokens: int,
+    model_config: ModelConfig,
+) -> int | None:
+    incomplete_details = getattr(response, "incomplete_details", None)
+    reason = getattr(incomplete_details, "reason", None)
+    if reason != "max_output_tokens":
+        return None
+
+    provider_limit = model_config.provider_max_output_tokens
+    retry_tokens = max(max_output_tokens * 2, OPENAI_STRUCTURED_OUTPUT_RETRY_FLOOR)
+    if provider_limit is not None:
+        retry_tokens = min(retry_tokens, provider_limit)
+
+    if retry_tokens <= max_output_tokens:
+        return None
+    return retry_tokens
+
+
+def _openai_missing_output_error(*, response: Any) -> str:
+    status = getattr(response, "status", None)
+    incomplete_details = getattr(response, "incomplete_details", None)
+    incomplete_reason = getattr(incomplete_details, "reason", None)
+    output_types = [
+        getattr(output, "type", type(output).__name__)
+        for output in getattr(response, "output", ()) or ()
+    ]
+
+    details: list[str] = []
+    if status is not None:
+        details.append(f"status={status}")
+    if incomplete_reason is not None:
+        details.append(f"incomplete_reason={incomplete_reason}")
+    if output_types:
+        details.append(f"output_types={output_types}")
+
+    message = "No structured output returned by the OpenAI model"
+    if details:
+        message += " (" + ", ".join(details) + ")"
+    if incomplete_reason == "max_output_tokens":
+        message += ". Retry with a higher --max-output-tokens value."
+    return message
 
 
 def _extract_openai_usage(response: Any) -> ProviderUsage | None:
