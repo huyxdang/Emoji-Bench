@@ -77,6 +77,16 @@ Step 5: (🪩 ⊕ 🍄) = 🪸    [by ⊕ table]
 Result: 🪸
 ```
 
+### Error Types
+
+Emoji-Bench currently uses three implemented error types and tracks two additional deferred types.
+
+- `E-RES` -- **Wrong result.** The cited rule is real and the operands are the right ones, but the output symbol is wrong. In the current prompt format, this is only injected on the terminal step; changing an earlier full-expression rewrite would otherwise create an obvious continuity break in the later steps.
+- `E-INV` -- **Invented rule.** The step cites a plausible-looking rule that is not actually defined in the formal system, such as a nonexistent transform or operator definition.
+- `E-CASC` -- **Cascading wrong result.** One earlier step is made wrong, and the remaining suffix is recomputed so that later steps are locally valid given the wrong intermediate value. This produces a fluent-looking derivation with a single root violation.
+- `E-OP` -- **Wrong operands.** Deferred for now. This would mean the model must detect that the rule was applied to the wrong subexpression or wrong pair of inputs, even if the claimed rewrite looks superficially plausible.
+- `E-SUB` -- **Subtle wrong lookup.** Deferred for now. This would be a near-miss table lookup where the returned symbol is close to the correct one, making the mistake harder to catch than a random wrong result.
+
 ### Status / TODO
 
 Currently supported error types are `E-RES`, `E-INV`, and `E-CASC`. `E-OP` and `E-SUB` are intentionally deferred for now because the current prompt format exposes full-expression rewrites rather than explicit local reductions.
