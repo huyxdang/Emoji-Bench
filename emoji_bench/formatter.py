@@ -147,29 +147,6 @@ def _format_op_table(op: OperationTable) -> str:
     return f"Operation {op.symbol_id} (defined by table):\n\n{header}\n{separator}\n" + "\n".join(rows)
 
 
-def _format_derived_op(dop: DerivedOperation) -> str:
-    """Format a derived operation definition in natural notation."""
-    base_sym = dop.base_ops[0]  # This is the op name; we'd need the system for symbol_id
-    # Use template_id to produce the definition string
-    match dop.template_id:
-        case "compose_left":
-            defn = f"x {dop.symbol_id} y = (x {dop.symbol_id} y) ... see base op"
-            # More precise: we need the base op symbol_id
-            # For now, use a generic form
-            return f"Derived operation {dop.symbol_id}:\nx {dop.symbol_id} y = (x [base] y) [base] x"
-        case "inv_compose":
-            return (
-                f"Derived operation {dop.symbol_id}:\n"
-                f"x {dop.symbol_id} y = {dop.transform_name}(x [base] y)"
-            )
-        case "double_left":
-            return (
-                f"Derived operation {dop.symbol_id}:\n"
-                f"x {dop.symbol_id} y = (x [base] x) [base] y"
-            )
-    return f"Derived operation {dop.symbol_id}: {dop.template_id}"
-
-
 def format_system_for_prompt_full(system: FormalSystem) -> str:
     """Format with resolved base-op symbols in derived operation definitions."""
     parts: list[str] = []
@@ -223,11 +200,6 @@ def _format_derived_op_resolved(dop: DerivedOperation, base_sym_id: str) -> str:
                 f"x {dop.symbol_id} y = (x {base_sym_id} x) {base_sym_id} y"
             )
     return f"Derived operation {dop.symbol_id}: {dop.template_id}"
-
-
-def _format_transform(tr: TransformationRule) -> str:
-    """Format a transformation rule (uses raw op names)."""
-    return _format_transform_resolved(tr, {})
 
 
 def _format_transform_resolved(
