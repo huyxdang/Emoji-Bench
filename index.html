@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Emoji-Bench</title>
+  <meta
+    name="description"
+    content="Emoji-Bench measures whether language models can detect reasoning errors inside genuinely novel formal systems."
+  />
+  <style>
+    :root {
+      --bg: #f4ecdf;
+      --bg-deep: #e8dcc8;
+      --surface: rgba(255, 250, 242, 0.86);
+      --surface-strong: #fffaf2;
+      --ink: #16110d;
+      --muted: #66584f;
+      --line: rgba(79, 53, 34, 0.14);
+      --shadow: 0 8px 30px rgba(56, 33, 18, 0.06);
+      --accent: #e16c34;
+      --accent-soft: rgba(225, 108, 52, 0.12);
+      --openai: #1f9d8b;
+      --openai-soft: rgba(31, 157, 139, 0.12);
+      --anthropic: #96633f;
+      --anthropic-soft: rgba(150, 99, 63, 0.12);
+      --mistral: #d85732;
+      --mistral-soft: rgba(216, 87, 50, 0.12);
+      --radius-lg: 30px;
+      --radius-md: 20px;
+      --radius-sm: 14px;
+      --content: 1240px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #f8f1e6 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .site-shell {
+      width: min(calc(100% - 32px), var(--content));
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 12px;
+      z-index: 12;
+      padding-top: 12px;
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      background: rgba(255, 248, 238, 0.78);
+      border: 1px solid rgba(73, 48, 32, 0.1);
+      border-radius: 999px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 4px 20px rgba(73, 48, 32, 0.06);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(255, 250, 242, 0.9);
+      border: 1px solid var(--line);
+      font-size: 20px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .nav-links a {
+      transition: color 160ms ease;
+    }
+
+    .nav-links a:hover,
+    .nav-links a:focus-visible {
+      color: var(--ink);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+      gap: 28px;
+      padding: 56px 0 28px;
+      align-items: end;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 250, 242, 0.8);
+      border: 1px solid rgba(73, 48, 32, 0.09);
+      box-shadow: none;
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .hero h1,
+    .section-heading h2,
+    .story-card h3,
+    .panel h3,
+    .takeaway h3,
+    .timeline-item h3 {
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      letter-spacing: -0.03em;
+    }
+
+    .hero h1 {
+      margin: 18px 0 18px;
+      font-size: clamp(3.6rem, 7vw, 7rem);
+      line-height: 0.94;
+      max-width: 12ch;
+    }
+
+    .hero .lead {
+      margin: 0;
+      max-width: 62ch;
+      font-size: 1.1rem;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      margin-top: 26px;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 700;
+      transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      transform: translateY(-2px);
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, #111, #2a2420);
+      color: #fffaf2;
+      box-shadow: 0 4px 16px rgba(22, 17, 13, 0.16);
+    }
+
+    .button-secondary {
+      background: rgba(255, 250, 242, 0.8);
+      color: var(--ink);
+      border-color: rgba(73, 48, 32, 0.1);
+      box-shadow: 0 4px 16px rgba(56, 33, 18, 0.06);
+    }
+
+    .hero-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .hero-card {
+      position: relative;
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      min-height: 100%;
+    }
+
+    .hero-card .mini-label {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .equation {
+      margin: 18px 0 20px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.06em;
+      line-height: 1.02;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .hero-stat {
+      padding: 14px 15px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(73, 48, 32, 0.08);
+    }
+
+    .hero-stat strong {
+      display: block;
+      font-size: 1.55rem;
+      line-height: 1;
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .hero-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    .hero-card .microcopy {
+      margin: 18px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    main {
+      padding-bottom: 72px;
+    }
+
+    section {
+      scroll-margin-top: 100px;
+      margin-top: 28px;
+    }
+
+    .panel,
+    .story-card,
+    .takeaway,
+    .timeline-item,
+    .example-card,
+    .protocol-card,
+    .footer-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .panel {
+      padding: 28px;
+    }
+
+    .section-heading {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+
+    .section-heading .kicker {
+      color: var(--accent);
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.6rem);
+      line-height: 0.98;
+      max-width: 13ch;
+    }
+
+    .section-heading p {
+      margin: 0;
+      max-width: 74ch;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 1.02rem;
+    }
+
+    .benchmark-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.75fr) minmax(0, 1.25fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .benchmark-sidebar {
+      display: grid;
+      gap: 14px;
+    }
+
+    .benchmark-sidebar .summary-box,
+    .chart-card {
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(255, 250, 242, 0.78);
+      border: 1px solid rgba(73, 48, 32, 0.1);
+    }
+
+    .summary-box strong {
+      display: block;
+      font-size: 2.9rem;
+      line-height: 0.95;
+      margin-bottom: 10px;
+      font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      letter-spacing: -0.04em;
+    }
+
+    .summary-box p,
+    .summary-box ul,
+    .chart-note,
+    .legend,
+    .benchmark-meta {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.68;
+    }
+
+    .summary-box ul {
+      padding-left: 18px;
+      margin-top: 14px;
+    }
+
+    .chart-card {
+      min-height: 100%;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: start;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .chart-header h3 {
+      margin: 0;
+      font-size: 1.55rem;
+      line-height: 1.08;
+    }
+
+    .chart-header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 62ch;
+      line-height: 1.7;
+    }
+
+    .control-strip {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      appearance: none;
+      border: 1px solid rgba(73, 48, 32, 0.12);
+      background: rgba(255, 255, 255, 0.68);
+      color: var(--muted);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition:
+        background 160ms ease,
+        color 160ms ease,
+        transform 160ms ease,
+        border-color 160ms ease;
+    }
+
+    .chip:hover,
+    .chip:focus-visible {
+      transform: translateY(-1px);
+      color: var(--ink);
+      border-color: rgba(73, 48, 32, 0.18);
+    }
+
+    .chip.is-active {
+      background: #191410;
+      color: #fff8ef;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(25, 20, 16, 0.14);
+    }
+
+    .benchmark-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 14px 0 6px;
+      font-size: 0.94rem;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      font-size: 0.94rem;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid rgba(73, 48, 32, 0.08);
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+    }
+
+    .benchmark-chart {
+      display: grid;
+      gap: 14px;
+    }
+
+    .benchmark-row {
+      display: grid;
+      grid-template-columns: minmax(210px, 270px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+      animation: rise 420ms ease both;
+    }
+
+    .model-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .provider-mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(73, 48, 32, 0.08);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--ink);
+      flex: none;
+    }
+
+    .provider-mark svg {
+      width: 24px;
+      height: 24px;
+      display: block;
+    }
+
+    .label-text {
+      min-width: 0;
+    }
+
+    .label-text strong,
+    .label-text span {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .label-text strong {
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+    }
+
+    .label-text span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .bar-track {
+      position: relative;
+      height: 54px;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(73, 48, 32, 0.03) 0,
+          rgba(73, 48, 32, 0.03) 1px,
+          transparent 1px,
+          transparent 20%
+        ),
+        rgba(255, 255, 255, 0.74);
+      border: 1px solid rgba(73, 48, 32, 0.08);
+    }
+
+    .bar-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.14), transparent 55%),
+        var(--bar-color, var(--accent));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      transition: width 420ms cubic-bezier(0.2, 0.72, 0.2, 1);
+    }
+
+    .bar-content {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+      padding: 0 16px;
+    }
+
+    .bar-value {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255, 250, 242, 0.92);
+      border: 1px solid rgba(73, 48, 32, 0.08);
+      box-shadow: 0 2px 8px rgba(73, 48, 32, 0.06);
+    }
+
+    .story-grid,
+    .takeaway-grid,
+    .stats-grid,
+    .protocol-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .story-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .takeaway-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .story-card,
+    .takeaway,
+    .protocol-card {
+      padding: 24px;
+    }
+
+    .story-card h3,
+    .takeaway h3,
+    .protocol-card h3,
+    .timeline-item h3 {
+      margin: 0 0 12px;
+      font-size: 1.5rem;
+      line-height: 1.08;
+    }
+
+    .story-card p,
+    .story-card li,
+    .takeaway p,
+    .timeline-item p,
+    .protocol-card p,
+    .protocol-card li {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    .story-card p + p,
+    .takeaway p + p,
+    .timeline-item p + p,
+    .protocol-card p + p {
+      margin-top: 12px;
+    }
+
+    .story-card ul,
+    .protocol-card ul {
+      margin: 14px 0 0;
+      padding-left: 18px;
+    }
+
+    .stats-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-top: 18px;
+    }
+
+    .stat-card {
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 250, 242, 0.78);
+      border: 1px solid rgba(73, 48, 32, 0.08);
+    }
+
+    .stat-card strong {
+      display: block;
+      font-size: 2.2rem;
+      line-height: 1;
+      margin-bottom: 10px;
+      letter-spacing: -0.04em;
+      font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    }
+
+    .stat-card span {
+      display: block;
+      color: var(--muted);
+      line-height: 1.58;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .timeline-item {
+      padding: 24px;
+    }
+
+    .timeline-step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      margin-bottom: 14px;
+      color: #fff8ef;
+      background: linear-gradient(135deg, #18120e, #46342a);
+      box-shadow: 0 4px 12px rgba(24, 18, 14, 0.1);
+    }
+
+    .example-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .example-card {
+      padding: 24px;
+    }
+
+    .example-card h3 {
+      margin: 0 0 12px;
+      font-size: 1.45rem;
+      font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+      letter-spacing: -0.03em;
+    }
+
+    pre {
+      margin: 0;
+      padding: 18px;
+      overflow-x: auto;
+      border-radius: 22px;
+      background: #17120f;
+      color: #f7ecdd;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      line-height: 1.55;
+      font-size: 0.92rem;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .inline-badge {
+      display: inline-flex;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .protocol-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .footer-card {
+      margin-top: 28px;
+      padding: 22px 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      color: var(--muted);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .reveal {
+      animation: rise 760ms cubic-bezier(0.18, 0.78, 0.18, 1) both;
+    }
+
+    .delay-1 {
+      animation-delay: 80ms;
+    }
+
+    .delay-2 {
+      animation-delay: 140ms;
+    }
+
+    .delay-3 {
+      animation-delay: 220ms;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1080px) {
+      .hero,
+      .benchmark-layout,
+      .example-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .story-grid,
+      .takeaway-grid,
+      .timeline,
+      .stats-grid,
+      .protocol-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .site-shell {
+        width: min(calc(100% - 20px), var(--content));
+      }
+
+      .topbar-inner {
+        border-radius: 24px;
+      }
+
+      .nav-links {
+        gap: 10px 14px;
+        font-size: 0.9rem;
+      }
+
+      .hero {
+        padding-top: 36px;
+      }
+
+      .hero h1 {
+        max-width: none;
+        font-size: clamp(2.8rem, 16vw, 4.6rem);
+      }
+
+      .benchmark-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .bar-track {
+        height: 48px;
+      }
+
+      .story-grid,
+      .takeaway-grid,
+      .timeline,
+      .stats-grid,
+      .protocol-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel,
+      .story-card,
+      .takeaway,
+      .timeline-item,
+      .example-card,
+      .protocol-card {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#top">
+          <span class="brand-mark" aria-hidden="true">🧠</span>
+          <span>Emoji-Bench</span>
+        </a>
+        <nav class="nav-links" aria-label="Section navigation">
+          <a href="#benchmark">The Benchmark</a>
+          <a href="#design">Design Choices</a>
+          <a href="#protocol">Protocol</a>
+          <a href="#results">Takeaways</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="reveal">
+          <div class="eyebrow">Novel Formal Systems for Metacognition</div>
+          <h1>Can a model spot a mistake it has never seen before?</h1>
+          <p class="lead">
+            Emoji-Bench measures whether language models genuinely verify reasoning steps or just
+            pattern-match on what errors usually look like. Every task lives inside a procedurally
+            generated emoji algebra that does not exist in training data.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">
+              <span aria-hidden="true">↗</span>
+              <span>GitHub</span>
+            </a>
+            <a class="button button-secondary" href="https://huggingface.co/datasets/huyxdang/emoji-bench-mixed-2000" target="_blank" rel="noreferrer">
+              <span aria-hidden="true">↗</span>
+              <span>Hugging Face</span>
+            </a>
+          </div>
+          <div class="hero-note">
+            Latest public results snapshot generated on April 2, 2026 from the full
+            <code>emoji-bench-mixed-2000</code> evaluation run.
+          </div>
+        </div>
+
+        <aside class="hero-card reveal delay-1">
+          <div class="mini-label">Why this benchmark feels different</div>
+          <div class="equation">🦩 ⊕ 🧲 = 🪣<br />🍄 ⊗ 🧄 = ?</div>
+          <div class="hero-grid">
+            <div class="hero-stat">
+              <strong>1,998</strong>
+              <span>benchmark instances, evenly split across clean and injected-error conditions</span>
+            </div>
+            <div class="hero-stat">
+              <strong>8</strong>
+              <span>models evaluated across OpenAI, Anthropic, and Mistral</span>
+            </div>
+            <div class="hero-stat">
+              <strong>4</strong>
+              <span>difficulty levels, from simple lookup tables to transforms and derived ops</span>
+            </div>
+            <div class="hero-stat">
+              <strong>3</strong>
+              <span>active error types: wrong result, invented rule, and cascading root mistake</span>
+            </div>
+          </div>
+          <p class="microcopy">
+            The point is not symbolic math. The point is forcing rule-checking inside a domain with
+            no memorized shortcuts.
+          </p>
+        </aside>
+      </section>
+
+      <section id="benchmark" class="panel reveal delay-1">
+        <div class="section-heading">
+          <div class="kicker">The Benchmark</div>
+          <h2>Initial results, sliced live.</h2>
+          <p>
+            Eight models across three providers, scored on the full 1,998-example run. Flip between
+            overall accuracy, difficulty levels, and error-type breakdowns.
+          </p>
+        </div>
+
+        <div class="benchmark-layout">
+          <div class="benchmark-sidebar">
+            <div class="summary-box">
+              <strong>GPT-5.4 leads by a wide margin.</strong>
+              <p>
+                On the primary accuracy metric, GPT-5.4 reaches 87.5% with a 0.0% false positive
+                rate. No other model is close on the full benchmark.
+              </p>
+            </div>
+            <div class="summary-box">
+              <p>
+                The sharpest discriminator is <strong>E-INV</strong>, where a model has to verify
+                that a cited rule actually exists. Models that look strong on forward computation
+                often collapse here.
+              </p>
+              <ul>
+                <li>Accuracy uses the joint metric: correct error detection and correct first wrong step.</li>
+                <li>False positive rate measures how often clean chains are incorrectly flagged.</li>
+                <li>Provider colors are consistent across every slice for fast scanning.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <div>
+                <h3 id="chartTitle">Overall Accuracy</h3>
+                <p id="chartDescription">
+                  Primary benchmark metric across the full 1,998-example run. Higher is better.
+                </p>
+              </div>
+            </div>
+
+            <div class="control-strip">
+              <div class="button-row" id="scopeButtons" aria-label="Chart views">
+                <button class="chip is-active" data-scope="overall" type="button">Overall</button>
+                <button class="chip" data-scope="difficulty" type="button">Difficulty</button>
+                <button class="chip" data-scope="errorType" type="button">Error Type</button>
+              </div>
+              <div class="button-row" id="sliceButtons" aria-label="Chart slices"></div>
+            </div>
+
+            <div class="benchmark-meta">
+              <span id="metricDirection">Higher is better</span>
+              <span>Values shown as percentages</span>
+            </div>
+
+            <div class="legend" aria-label="Provider legend">
+              <span class="legend-item"><span class="swatch" style="background:#1f9d8b"></span>OpenAI</span>
+              <span class="legend-item"><span class="swatch" style="background:#96633f"></span>Anthropic</span>
+              <span class="legend-item"><span class="swatch" style="background:#d85732"></span>Mistral</span>
+            </div>
+
+            <div class="benchmark-chart" id="benchmarkChart" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="design" class="reveal delay-2">
+        <div class="section-heading">
+          <div class="kicker">Design Choices</div>
+          <h2>What the benchmark is trying to isolate.</h2>
+          <p>
+            The benchmark is built to separate genuine constraint evaluation from familiarity. That
+            means every design choice pushes toward novelty, determinism, and explicit verification.
+          </p>
+        </div>
+
+        <div class="story-grid">
+          <article class="story-card">
+            <h3>Novel formal systems, not familiar domains</h3>
+            <p>
+              Existing metacognition benchmarks usually sit inside arithmetic, algebra, or code,
+              all of which are heavily represented in pretraining. Emoji-Bench instead invents a
+              fresh symbolic world for each instance, so a model has to consult the rules in front
+              of it.
+            </p>
+            <p>
+              If the algebra never existed before the prompt, detecting an error requires actual
+              table lookup and rule verification rather than learned error aesthetics.
+            </p>
+          </article>
+
+          <article class="story-card">
+            <h3>Emoji symbols are deliberate</h3>
+            <p>
+              The symbol pool is curated for single-token behavior across major model families,
+              clear visual separation for humans, and zero mathematical baggage. A flamingo or a
+              magnet does not smuggle arithmetic priors into the task.
+            </p>
+            <p>
+              That keeps the evaluation focused on rule-following, not background semantic
+              associations.
+            </p>
+          </article>
+
+          <article class="story-card">
+            <h3>Difficulty scales by rule load, not chain length</h3>
+            <p>
+              Every chain stays short and readable while the formal system gets denser: more
+              symbols, more base operations, more derived operators, and more transformations.
+            </p>
+            <p>
+              This makes the scaling interpretable. The task gets harder because there is more to
+              track, not because the prompt becomes a wall of steps.
+            </p>
+          </article>
+
+          <article class="story-card">
+            <h3>Error injection probes different failure modes</h3>
+            <p>
+              <strong>E-RES</strong> tests whether a model can catch a wrong output symbol.
+              <strong>E-INV</strong> tests whether it checks that a cited rule exists at all.
+              <strong>E-CASC</strong> makes later steps locally valid after an early root mistake.
+            </p>
+            <p>
+              Together they distinguish surface fluency from real verification.
+            </p>
+          </article>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <strong>Easy</strong>
+            <span>3 symbols, 1 base op, no derived ops, no transforms</span>
+          </div>
+          <div class="stat-card">
+            <strong>Medium</strong>
+            <span>4 symbols, 1 base op, 1 derived op, 1 transform</span>
+          </div>
+          <div class="stat-card">
+            <strong>Hard</strong>
+            <span>5 symbols, 2 base ops, 1 derived op, 1 transform</span>
+          </div>
+          <div class="stat-card">
+            <strong>Expert</strong>
+            <span>6 symbols, 2 base ops, 2 derived ops, 2 transforms</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="reveal delay-2">
+        <div class="section-heading">
+          <div class="kicker">Construction</div>
+          <h2>Four deterministic stages.</h2>
+          <p>
+            Each benchmark row is built from a seeded pipeline. That keeps the released dataset
+            reproducible and makes it possible to reason precisely about what changed between
+            conditions.
+          </p>
+        </div>
+
+        <div class="timeline">
+          <article class="timeline-item">
+            <div class="timeline-step">01</div>
+            <h3>System generation</h3>
+            <p>
+              Sample 3 to 6 emoji symbols, generate one or two base operation tables, optionally
+              add derived operations, and optionally generate transformations that distribute over
+              the base ops.
+            </p>
+          </article>
+
+          <article class="timeline-item">
+            <div class="timeline-step">02</div>
+            <h3>Chain construction</h3>
+            <p>
+              Build a leftmost-innermost derivation chain so each reduction step is explicit and
+              the intended evaluation order stays unambiguous.
+            </p>
+          </article>
+
+          <article class="timeline-item">
+            <div class="timeline-step">03</div>
+            <h3>Error injection</h3>
+            <p>
+              Emit a clean version plus up to three single-error variants. Cascading errors are
+              recomputed downstream so local consistency cannot rescue a shallow checker.
+            </p>
+          </article>
+
+          <article class="timeline-item">
+            <div class="timeline-step">04</div>
+            <h3>Validation</h3>
+            <p>
+              Check closure, table completeness, derived-op consistency, and transformation
+              distribution before anything gets released into the dataset.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="reveal delay-3">
+        <div class="section-heading">
+          <div class="kicker">Example</div>
+          <h2>What a failure case looks like.</h2>
+          <p>
+            This is a medium-difficulty <code>E-CASC</code> instance. Step 2 is wrong, and the rest
+            of the chain is recomputed from that wrong state, which is what makes the example useful.
+          </p>
+        </div>
+
+        <div class="example-layout">
+          <article class="example-card">
+            <div class="inline-badge">Medium E-CASC</div>
+            <pre>Symbols: {🪸, 🪩, 🧄, 🍄}
+
+Derived op: x ⊗ y = (x ⊕ x) ⊕ y
+Transform: inv(🪸)=🪩, inv(🪩)=🪸, inv(🧄)=🍄, inv(🍄)=🧄
+
+Start: (inv(🧄) ⊗ inv(🍄))
+
+Step 1: (inv(🧄) ⊗ inv(🍄)) → (🍄 ⊗ inv(🍄))   [by inv]
+Step 2: (🍄 ⊗ inv(🍄)) → (🍄 ⊗ 🍄)             [by inv]  ← first error
+Step 3: (🍄 ⊗ 🍄) → ((🍄 ⊕ 🍄) ⊕ 🍄)           [by definition of ⊗]
+Step 4: ((🍄 ⊕ 🍄) ⊕ 🍄) → (🪩 ⊕ 🍄)           [by ⊕ table]
+Step 5: (🪩 ⊕ 🍄) → 🪸                         [by ⊕ table]</pre>
+          </article>
+
+          <article class="example-card">
+            <h3>Why this case matters</h3>
+            <p>
+              A shallow checker can look at steps 3 through 5 and see a coherent derivation. That
+              is not enough. The model has to notice that step 2 applied the transform incorrectly,
+              then treat the whole suffix as downstream of the first violation.
+            </p>
+            <p>
+              This is why <code>E-CASC</code> is a useful stress test: it punishes local plausibility
+              heuristics and rewards verification from the start of the chain.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="protocol" class="reveal delay-3">
+        <div class="section-heading">
+          <div class="kicker">Protocol</div>
+          <h2>Prompting, outputs, and scoring are intentionally tight.</h2>
+          <p>
+            The model is framed as auditing its own prior work, then forced into structured output.
+            That keeps the measurement focused on detection and localization instead of prose style.
+          </p>
+        </div>
+
+        <div class="protocol-grid">
+          <article class="protocol-card">
+            <h3>Prompt structure</h3>
+            <p>
+              Each prompt contains the rules, the worked derivation, and a task asking whether
+              there is an error and, if so, what the first incorrect step is.
+            </p>
+            <p>
+              The wording “your working out” is deliberate. The benchmark is measuring a
+              metacognitive auditing setup, not open-ended explanation quality.
+            </p>
+          </article>
+
+          <article class="protocol-card">
+            <h3>Output format</h3>
+            <p>
+              All evaluations use structured output. OpenAI runs use the Responses API parse path,
+              Anthropic runs use Messages API JSON schema output, and Mistral runs use JSON object
+              response formatting at temperature zero.
+            </p>
+          </article>
+
+          <article class="protocol-card">
+            <h3>Primary metric</h3>
+            <p>
+              The page emphasizes joint accuracy: the model must both decide correctly whether an
+              error exists and identify the first wrong step. The false positive slice is included
+              because some models look competitive only by hallucinating errors on clean rows.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="results" class="reveal delay-3">
+        <div class="section-heading">
+          <div class="kicker">Takeaways</div>
+          <h2>What the first run suggests.</h2>
+          <p>
+            The initial evaluation already shows a meaningful separation between models that check
+            constraints and models that mostly react to surface cues.
+          </p>
+        </div>
+
+        <div class="takeaway-grid">
+          <article class="takeaway">
+            <h3>GPT-5.4 is the clear outlier</h3>
+            <p>
+              It leads every aggregate slice and posts a 0.0% false positive rate on clean chains.
+              That combination strongly suggests systematic verification rather than broad
+              suspicion.
+            </p>
+          </article>
+
+          <article class="takeaway">
+            <h3>Invented-rule errors are the real separator</h3>
+            <p>
+              <code>E-INV</code> exposes whether a model checks that a rule exists instead of merely
+              validating the resulting rewrite. Several otherwise strong models break sharply here.
+            </p>
+          </article>
+
+          <article class="takeaway">
+            <h3>False positives are a major failure mode</h3>
+            <p>
+              Some non-reasoning models recover many actual error rows but still collapse overall by
+              flagging clean derivations at very high rates. The benchmark makes that visible fast.
+            </p>
+          </article>
+
+          <article class="takeaway">
+            <h3>Difficulty hurts real verifiers more than weak ones</h3>
+            <p>
+              GPT-5.4 drops from easy to expert as the rule load grows. Several weaker models stay
+              flat because they are already operating near a floor, which fits the pattern-matching
+              hypothesis.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <footer class="footer-card">
+        <span>Emoji-Bench &mdash; Metacognitive reasoning benchmark for LLMs.</span>
+        <div class="footer-links">
+          <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">Repository</a>
+          <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-mixed-2000" target="_blank" rel="noreferrer">Dataset</a>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const providerIcons = {
+      openai: `
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75">
+          <circle cx="12" cy="4.3" r="2.35"></circle>
+          <circle cx="18.2" cy="7.9" r="2.35"></circle>
+          <circle cx="18.2" cy="16.1" r="2.35"></circle>
+          <circle cx="12" cy="19.7" r="2.35"></circle>
+          <circle cx="5.8" cy="16.1" r="2.35"></circle>
+          <circle cx="5.8" cy="7.9" r="2.35"></circle>
+        </svg>
+      `,
+      anthropic: `
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+          <path d="M12.02 3.8 18.7 20.2h-3.42l-1.3-3.37H9.86l-1.29 3.37H5.14L11.8 3.8Zm1.02 10.45-1.12-2.94c-.28-.73-.55-1.57-.78-2.32h-.06c-.23.76-.47 1.61-.74 2.32l-1.1 2.94Z"></path>
+        </svg>
+      `,
+      mistral: `
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+          <path d="M4 5h4v14H4Zm6 0h4v6h-4Zm0 8h4v6h-4Zm6-8h4v14h-4Z"></path>
+        </svg>
+      `
+    };
+
+    const models = [
+      { id: "gpt-5.4", name: "GPT-5.4", provider: "openai", company: "OpenAI", color: "#1f9d8b" },
+      { id: "gpt-5.4-mini", name: "GPT-5.4 mini", provider: "openai", company: "OpenAI", color: "#4db6a3" },
+      { id: "gpt-5.4-nano", name: "GPT-5.4 nano", provider: "openai", company: "OpenAI", color: "#8ed8c8" },
+      { id: "gpt-4.1-mini", name: "GPT-4.1 mini", provider: "openai", company: "OpenAI", color: "#caefe5" },
+      { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", provider: "anthropic", company: "Anthropic", color: "#96633f" },
+      { id: "claude-haiku-4-5", name: "Claude Haiku 4.5", provider: "anthropic", company: "Anthropic", color: "#c7956f" },
+      { id: "mistral-large-2512", name: "Mistral Large 3", provider: "mistral", company: "Mistral", color: "#d85732" },
+      { id: "mistral-medium-2508", name: "Mistral Medium 3.1", provider: "mistral", company: "Mistral", color: "#ef8d64" }
+    ];
+
+    const data = {
+      overall: {
+        accuracy: {
+          label: "Overall Accuracy",
+          description: "Primary benchmark metric across the full 1,998-example run. Higher is better.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 87.5,
+            "gpt-5.4-nano": 74.3,
+            "gpt-5.4-mini": 71.7,
+            "gpt-4.1-mini": 49.5,
+            "mistral-large-2512": 48.7,
+            "mistral-medium-2508": 48.7,
+            "claude-haiku-4-5": 48.4,
+            "claude-sonnet-4-6": 48.4
+          }
+        },
+        falsePositive: {
+          label: "False Positive Rate",
+          description: "Share of clean derivations incorrectly flagged as errors. Lower is better.",
+          direction: "lower",
+          values: {
+            "gpt-5.4": 0.0,
+            "gpt-5.4-nano": 2.6,
+            "gpt-5.4-mini": 2.6,
+            "claude-sonnet-4-6": 15.0,
+            "mistral-medium-2508": 25.6,
+            "mistral-large-2512": 40.8,
+            "gpt-4.1-mini": 55.2,
+            "claude-haiku-4-5": 61.4
+          }
+        }
+      },
+      difficulty: {
+        easy: {
+          label: "Easy Accuracy",
+          description: "Joint accuracy at the easiest setting: 3 symbols, 1 base operation, no transforms.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 96.2,
+            "gpt-5.4-nano": 74.5,
+            "gpt-5.4-mini": 71.7,
+            "gpt-4.1-mini": 51.5,
+            "mistral-medium-2508": 51.1,
+            "mistral-large-2512": 49.7,
+            "claude-sonnet-4-6": 49.3,
+            "claude-haiku-4-5": 44.9
+          }
+        },
+        medium: {
+          label: "Medium Accuracy",
+          description: "Joint accuracy with one derived operator and one transformation in the system.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 85.2,
+            "gpt-5.4-nano": 75.2,
+            "gpt-5.4-mini": 72.1,
+            "claude-haiku-4-5": 52.3,
+            "mistral-large-2512": 51.3,
+            "claude-sonnet-4-6": 50.9,
+            "gpt-4.1-mini": 50.1,
+            "mistral-medium-2508": 49.1
+          }
+        },
+        hard: {
+          label: "Hard Accuracy",
+          description: "Joint accuracy with two base operations and a denser verification load.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 84.4,
+            "gpt-5.4-nano": 74.0,
+            "gpt-5.4-mini": 72.4,
+            "gpt-4.1-mini": 50.2,
+            "claude-haiku-4-5": 49.6,
+            "mistral-large-2512": 47.0,
+            "mistral-medium-2508": 47.0,
+            "claude-sonnet-4-6": 44.2
+          }
+        },
+        expert: {
+          label: "Expert Accuracy",
+          description: "Joint accuracy at the hardest setting with six symbols, multiple derived ops, and transforms.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 84.2,
+            "gpt-5.4-nano": 73.4,
+            "gpt-5.4-mini": 70.6,
+            "claude-sonnet-4-6": 49.4,
+            "mistral-medium-2508": 47.4,
+            "mistral-large-2512": 47.0,
+            "claude-haiku-4-5": 46.8,
+            "gpt-4.1-mini": 46.2
+          }
+        }
+      },
+      errorType: {
+        clean: {
+          label: "Clean Chains",
+          description: "Accuracy on clean derivations. This slice shows who resists hallucinating errors.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 100.0,
+            "gpt-5.4-nano": 97.4,
+            "gpt-5.4-mini": 97.4,
+            "claude-sonnet-4-6": 85.0,
+            "mistral-medium-2508": 74.4,
+            "mistral-large-2512": 59.2,
+            "gpt-4.1-mini": 44.8,
+            "claude-haiku-4-5": 38.6
+          }
+        },
+        eres: {
+          label: "E-RES",
+          description: "Wrong-result errors. Models must verify the lookup output, not just the cited rule.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 100.0,
+            "gpt-5.4-mini": 99.2,
+            "gpt-5.4-nano": 97.0,
+            "claude-haiku-4-5": 85.4,
+            "gpt-4.1-mini": 77.6,
+            "claude-sonnet-4-6": 74.8,
+            "mistral-medium-2508": 58.0,
+            "mistral-large-2512": 56.2
+          }
+        },
+        einv: {
+          label: "E-INV",
+          description: "Invented-rule errors. Models have to verify that the named rule actually exists.",
+          direction: "higher",
+          values: {
+            "mistral-large-2512": 85.0,
+            "claude-haiku-4-5": 78.8,
+            "gpt-4.1-mini": 77.6,
+            "mistral-medium-2508": 71.4,
+            "gpt-5.4": 50.0,
+            "claude-sonnet-4-6": 34.4,
+            "gpt-5.4-nano": 7.4,
+            "gpt-5.4-mini": 2.6
+          }
+        },
+        ecasc: {
+          label: "E-CASC",
+          description: "Cascading errors. Later steps can look locally valid even after the root mistake.",
+          direction: "higher",
+          values: {
+            "gpt-5.4": 100.0,
+            "gpt-5.4-nano": 99.8,
+            "gpt-5.4-mini": 99.0,
+            "claude-haiku-4-5": 79.9,
+            "gpt-4.1-mini": 71.7,
+            "mistral-large-2512": 56.6,
+            "claude-sonnet-4-6": 50.4,
+            "mistral-medium-2508": 47.8
+          }
+        }
+      }
+    };
+
+    const scopeOrder = {
+      overall: ["accuracy", "falsePositive"],
+      difficulty: ["easy", "medium", "hard", "expert"],
+      errorType: ["clean", "eres", "einv", "ecasc"]
+    };
+
+    const scopeButtonContainer = document.getElementById("scopeButtons");
+    const sliceButtonContainer = document.getElementById("sliceButtons");
+    const benchmarkChart = document.getElementById("benchmarkChart");
+    const chartTitle = document.getElementById("chartTitle");
+    const chartDescription = document.getElementById("chartDescription");
+    const metricDirection = document.getElementById("metricDirection");
+
+    let currentScope = "overall";
+    let currentSlice = scopeOrder[currentScope][0];
+
+    const formatPercent = (value) => `${value.toFixed(1)}%`;
+    const sortValues = (metric) =>
+      [...models].sort((a, b) =>
+        metric.direction === "lower"
+          ? metric.values[a.id] - metric.values[b.id]
+          : metric.values[b.id] - metric.values[a.id]
+      );
+
+    function renderSliceButtons() {
+      sliceButtonContainer.innerHTML = "";
+      scopeOrder[currentScope].forEach((sliceKey) => {
+        const metric = data[currentScope][sliceKey];
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `chip${sliceKey === currentSlice ? " is-active" : ""}`;
+        button.dataset.slice = sliceKey;
+        button.textContent = metric.label;
+        button.addEventListener("click", () => {
+          currentSlice = sliceKey;
+          renderSliceButtons();
+          renderChart();
+        });
+        sliceButtonContainer.appendChild(button);
+      });
+    }
+
+    function renderChart() {
+      const metric = data[currentScope][currentSlice];
+      const orderedModels = sortValues(metric);
+
+      chartTitle.textContent = metric.label;
+      chartDescription.textContent = metric.description;
+      metricDirection.textContent =
+        metric.direction === "lower" ? "Lower is better" : "Higher is better";
+
+      benchmarkChart.innerHTML = "";
+
+      orderedModels.forEach((model) => {
+        const value = metric.values[model.id];
+        const row = document.createElement("div");
+
+        row.className = "benchmark-row";
+        row.innerHTML = `
+          <div class="model-label">
+            <div class="provider-mark" style="color:${model.color}">
+              ${providerIcons[model.provider]}
+            </div>
+            <div class="label-text">
+              <strong>${model.name}</strong>
+              <span>${model.company}</span>
+            </div>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="--bar-color:${model.color}; width:${value}%"></div>
+            <div class="bar-content">
+              <span class="bar-value">${formatPercent(value)}</span>
+            </div>
+          </div>
+        `;
+        benchmarkChart.appendChild(row);
+      });
+    }
+
+    scopeButtonContainer.querySelectorAll("[data-scope]").forEach((button) => {
+      button.addEventListener("click", () => {
+        currentScope = button.dataset.scope;
+        currentSlice = scopeOrder[currentScope][0];
+
+        scopeButtonContainer.querySelectorAll("[data-scope]").forEach((item) => {
+          item.classList.toggle("is-active", item === button);
+        });
+
+        renderSliceButtons();
+        renderChart();
+      });
+    });
+
+    renderSliceButtons();
+    renderChart();
+  </script>
+</body>
+</html>
