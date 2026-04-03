@@ -423,3 +423,7 @@ By error type:
 | E-CASC | 72.7% | 62.7% | 86.2% |
 
 Joint accuracy is essentially flat across difficulty levels (~47-51%), suggesting `gpt-4.1-mini` is near its floor on this task regardless of problem complexity. Stronger models may show more separation.
+
+README should be like: 
+- What this is about 
+- How to run this
