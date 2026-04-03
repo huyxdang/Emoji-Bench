@@ -1,6 +1,10 @@
 .pytest_cache
 .git
+
+# Coding Agents
 .claude
+.codex
+
 __pycache__/
 *.pyc
 .venv

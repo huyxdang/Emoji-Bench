@@ -427,3 +427,8 @@ Joint accuracy is essentially flat across difficulty levels (~47-51%), suggestin
 README should be like: 
 - What this is about 
 - How to run this
+
+[FE]
+- When hovering around the "Emoji Bench", emojis should be spawing out. lmao.
+
+- Should be like a dropdown
