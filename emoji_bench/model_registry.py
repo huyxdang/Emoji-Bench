@@ -7,7 +7,7 @@ from typing import Literal
 ProviderName = Literal["openai", "anthropic", "mistral"]
 ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
-DEFAULT_MAX_OUTPUT_TOKENS = 512
+DEFAULT_MAX_OUTPUT_TOKENS = 2048
 
 
 @dataclass(frozen=True)

@@ -1,1 +1,0 @@
-- [ ] Mathematically provide that the conditions we hold to make our dataset rigorous is true. 
