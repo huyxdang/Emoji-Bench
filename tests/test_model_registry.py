@@ -5,9 +5,11 @@ from emoji_bench.model_registry import (
     model_choices,
 )
 from emoji_bench.provider_eval import (
+    GEMINI_PREDICTION_JSON_SCHEMA,
     PREDICTION_JSON_SCHEMA,
     SYSTEM_PROMPT,
     build_anthropic_request_options,
+    build_gemini_request_options,
     build_mistral_request_options,
     build_openai_request_options,
     resolve_api_key,
@@ -18,6 +20,8 @@ def test_requested_model_configs_are_present():
     assert {
         "claude-haiku-4-5",
         "claude-sonnet-4-6",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
         "gpt-5.4",
         "gpt-5.4-mini",
         "gpt-5.4-nano",
@@ -108,6 +112,21 @@ def test_build_mistral_request_options_uses_json_mode():
     assert options["messages"][1] == {"role": "user", "content": "example prompt"}
 
 
+def test_build_gemini_request_options_uses_json_schema_mode():
+    config = get_model_config("gemini-3.1-pro-preview")
+    options = build_gemini_request_options(
+        model_config=config,
+        prompt="example prompt",
+        max_output_tokens=77,
+    )
+
+    assert options["systemInstruction"] == {"parts": [{"text": SYSTEM_PROMPT}]}
+    assert options["contents"] == [{"role": "user", "parts": [{"text": "example prompt"}]}]
+    assert options["generationConfig"]["maxOutputTokens"] == 77
+    assert options["generationConfig"]["responseMimeType"] == "application/json"
+    assert options["generationConfig"]["responseJsonSchema"] == GEMINI_PREDICTION_JSON_SCHEMA
+
+
 def test_resolve_api_key_uses_provider_specific_env_var():
     config = get_model_config("claude-sonnet-4-6")
     api_key = resolve_api_key(
@@ -116,3 +135,13 @@ def test_resolve_api_key_uses_provider_specific_env_var():
         env={"ANTHROPIC_API_KEY": "test-key"},
     )
     assert api_key == "test-key"
+
+
+def test_resolve_api_key_supports_gemini_env_var():
+    config = get_model_config("gemini-3-flash-preview")
+    api_key = resolve_api_key(
+        model_config=config,
+        explicit_api_key=None,
+        env={"GEMINI_API_KEY": "test-gemini-key"},
+    )
+    assert api_key == "test-gemini-key"

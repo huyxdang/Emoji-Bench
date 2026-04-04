@@ -4,10 +4,10 @@ from dataclasses import asdict, dataclass
 from typing import Literal
 
 
-ProviderName = Literal["openai", "anthropic", "mistral"]
+ProviderName = Literal["openai", "anthropic", "mistral", "gemini"]
 ReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
-DEFAULT_MAX_OUTPUT_TOKENS = 2048
+DEFAULT_MAX_OUTPUT_TOKENS = 512
 
 
 @dataclass(frozen=True)
@@ -118,6 +118,34 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         notes=(
             "Anthropic's official docs list claude-haiku-4-5 as the alias and "
             "claude-haiku-4-5-20251001 as the snapshot ID."
+        ),
+    ),
+    "gemini-3-flash-preview": ModelConfig(
+        key="gemini-3-flash-preview",
+        label="Gemini 3 Flash Preview",
+        provider="gemini",
+        api_model="gemini-3-flash-preview",
+        docs_url="https://ai.google.dev/gemini-api/docs/gemini-3",
+        api_key_env_var="GEMINI_API_KEY",
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        provider_max_output_tokens=64_000,
+        notes=(
+            "Google's Gemini 3 guide documents Gemini 3 Flash Preview with a 1M token "
+            "context window, 64k max output tokens, and dynamic high thinking by default."
+        ),
+    ),
+    "gemini-3.1-pro-preview": ModelConfig(
+        key="gemini-3.1-pro-preview",
+        label="Gemini 3.1 Pro Preview",
+        provider="gemini",
+        api_model="gemini-3.1-pro-preview",
+        docs_url="https://ai.google.dev/gemini-api/docs/gemini-3",
+        api_key_env_var="GEMINI_API_KEY",
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        provider_max_output_tokens=64_000,
+        notes=(
+            "Google's Gemini 3 guide documents Gemini 3.1 Pro Preview with a 1M token "
+            "context window, 64k max output tokens, and dynamic high thinking by default."
         ),
     ),
     "mistral-large-2512": ModelConfig(

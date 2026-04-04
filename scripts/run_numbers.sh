@@ -17,6 +17,8 @@ MODELS=(
   gpt-4.1-mini
   gpt-5.4-mini
   gpt-5.4-nano
+  gemini-3.1-pro-preview
+  gemini-3-flash-preview
   mistral-large-2512
   mistral-medium-2508
 )

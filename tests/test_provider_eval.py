@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from emoji_bench.model_registry import get_model_config
 from emoji_bench.provider_eval import (
+    _request_gemini_prediction,
     _openai_missing_output_error,
     _request_mistral_prediction,
     _request_openai_prediction,
@@ -38,6 +39,16 @@ class _FakeMistralClient:
 
     def chat_complete(self, options: dict):
         self.calls.append(options)
+        return self._queued_responses.pop(0)
+
+
+class _FakeGeminiClient:
+    def __init__(self, queued_responses: list[dict]):
+        self._queued_responses = list(queued_responses)
+        self.calls: list[dict] = []
+
+    def generate_content(self, *, model: str, options: dict):
+        self.calls.append({"model": model, "options": options})
         return self._queued_responses.pop(0)
 
 
@@ -196,3 +207,47 @@ def test_request_mistral_prediction_extracts_json_payload_and_usage():
     assert provider_response.usage.output_tokens == 7
     assert provider_response.usage.total_tokens == 18
     assert client.calls[0]["response_format"] == {"type": "json_object"}
+
+
+def test_request_gemini_prediction_extracts_json_payload_and_usage():
+    client = _FakeGeminiClient(
+        [
+            {
+                "responseId": "gemini-response",
+                "candidates": [
+                    {
+                        "content": {
+                            "parts": [
+                                {"text": '{"has_error": false, "error_step": null}'}
+                            ]
+                        },
+                        "finishReason": "STOP",
+                    }
+                ],
+                "usageMetadata": {
+                    "promptTokenCount": 13,
+                    "candidatesTokenCount": 5,
+                    "thoughtsTokenCount": 9,
+                    "totalTokenCount": 27,
+                },
+            }
+        ]
+    )
+
+    provider_response = _request_gemini_prediction(
+        client=client,
+        model_config=get_model_config("gemini-3.1-pro-preview"),
+        prompt="example",
+        max_output_tokens=50,
+    )
+
+    assert provider_response.prediction_payload == {"has_error": False, "error_step": None}
+    assert provider_response.response_id == "gemini-response"
+    assert provider_response.raw_output_text == '{"has_error": false, "error_step": null}'
+    assert provider_response.usage is not None
+    assert provider_response.usage.input_tokens == 13
+    assert provider_response.usage.output_tokens == 5
+    assert provider_response.usage.reasoning_tokens == 9
+    assert provider_response.usage.total_tokens == 27
+    assert client.calls[0]["model"] == "gemini-3.1-pro-preview"
+    assert client.calls[0]["options"]["generationConfig"]["responseMimeType"] == "application/json"

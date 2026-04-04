@@ -16,11 +16,13 @@ If a model can detect rule violations in a system it has never seen before, it m
 uv pip install -e ".[dev]"
 ```
 
-For model evaluation clients:
+For OpenAI and Anthropic evaluation clients:
 
 ```bash
 uv pip install -e ".[openai,anthropic]"
 ```
+
+Gemini and Mistral use direct HTTPS integrations in this repo, so no extra Python package is required. Set `GEMINI_API_KEY` or `MISTRAL_API_KEY` in your environment before running those evaluators.
 
 ```python
 from emoji_bench.generator import generate_system
@@ -104,7 +106,7 @@ Currently supported error types are `E-RES`, `E-INV`, and `E-CASC`. `E-OP` and `
 - [x] Error injection for `E-RES`, `E-INV`, and `E-CASC`
 - [x] JSON round-tripping for generated formal systems
 - [x] End-to-end test coverage across generator, formatter, interpreter, chain builder, and benchmark APIs
-- [x] Evaluation runners for configured OpenAI and Anthropic models
+- [x] Evaluation runners for configured OpenAI, Anthropic, Gemini, and Mistral models
 - [ ] Suspicious-but-correct benchmark condition
 - [ ] Rule-visibility ablation / no-rules control
 - [ ] Familiar-domain arithmetic mirror condition
@@ -184,6 +186,7 @@ Configured models currently include:
 - `gpt-4.1-mini` (non-reasoning baseline)
 - `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.4-nano` with `reasoning.effort=medium`
 - `claude-sonnet-4-6`, `claude-haiku-4-5`
+- `gemini-3-flash-preview`, `gemini-3.1-pro-preview`
 - `mistral-large-2512`, `mistral-medium-2508`
 
 The model registry lives in `emoji_bench/model_registry.py`. The shared CLI is `scripts/evaluate_model.py`, and the provider-specific request handling lives in `emoji_bench/provider_eval.py`.
@@ -194,9 +197,10 @@ Current evaluator defaults now favor reasoning headroom over minimum-cost runs:
 - `gpt-5.4-nano` defaults to `2048` because `512` was too small for reliable structured-output completion on Emoji-Bench
 - GPT-5.4 family models use medium reasoning by default
 - Anthropic extended thinking is supported by the configured Claude models but disabled by default
+- Gemini 3 Flash Preview and Gemini 3.1 Pro Preview use Gemini's default dynamic high thinking behavior
 - Mistral models use the same default token budget unless you explicitly pass `--max-output-tokens`
 
-As of April 2, 2026, the config values above were checked against official OpenAI and Anthropic docs while adding this integration layer.
+As of April 4, 2026, the config values above were checked against official OpenAI, Anthropic, Google Gemini, and Mistral docs while adding this integration layer.
 
 ### Download The Evaluation Dataset
 
@@ -235,6 +239,15 @@ uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
   --limit 2
 ```
 
+Gemini example:
+
+```bash
+python scripts/evaluate_gemini.py \
+  artifacts/emoji-bench-mixed-2000 \
+  --model gemini-3-flash-preview \
+  --limit 2
+```
+
 Mistral example:
 
 ```bash
@@ -267,10 +280,10 @@ From another terminal, gracefully stop the current running `bash` process for th
 pkill -TERM -f 'scripts/run\.sh'
 ```
 
-Smoke test only the four current expansion targets:
+Smoke test a mixed cross-provider subset:
 
 ```bash
-./scripts/run.sh gpt-5.4-nano claude-sonnet-4-6 mistral-large-2512 mistral-medium-2508
+./scripts/run.sh gpt-5.4-nano claude-sonnet-4-6 gemini-3-flash-preview gemini-3.1-pro-preview mistral-large-2512 mistral-medium-2508
 ```
 
 Run the first 500 examples instead of the full 2,000-example test split:
@@ -294,7 +307,7 @@ LIMIT=500 ./scripts/run.sh gpt-5.4-mini claude-sonnet-4-6
 Run the subset discussed here on the full dataset:
 
 ```bash
-LIMIT=all ./scripts/run.sh gpt-5.4-nano claude-sonnet-4-6 mistral-large-2512 mistral-medium-2508
+LIMIT=all ./scripts/run.sh gpt-5.4-nano claude-sonnet-4-6 gemini-3-flash-preview gemini-3.1-pro-preview mistral-large-2512 mistral-medium-2508
 ```
 
 ### Parallelism
@@ -313,7 +326,7 @@ Run all configured models simultaneously:
 LIMIT=500 MODEL_PARALLELISM=all ./scripts/run.sh
 ```
 
-Why not always run all six at once? Because the bottleneck is usually provider-side rate limits, quota, or burst capacity rather than local CPU. Running everything simultaneously is supported, but it can lead to more API throttling, longer retries, or uneven completion times across providers.
+Why not always run all ten at once? Because the bottleneck is usually provider-side rate limits, quota, or burst capacity rather than local CPU. Running everything simultaneously is supported, but it can lead to more API throttling, longer retries, or uneven completion times across providers.
 
 ### Per-Model Sharding
 
@@ -325,11 +338,11 @@ Run four shards per model with up to eight shard jobs active at once:
 LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run.sh
 ```
 
-Run four shards for the OpenAI / Anthropic / Mistral subset:
+Run four shards for an OpenAI / Anthropic / Gemini / Mistral subset:
 
 ```bash
 LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run.sh \
-  gpt-5.4-nano claude-sonnet-4-6 mistral-large-2512 mistral-medium-2508
+  gpt-5.4-nano claude-sonnet-4-6 gemini-3-flash-preview gemini-3.1-pro-preview mistral-large-2512 mistral-medium-2508
 ```
 
 If you use `MODEL_PARALLELISM=all`, it now means all model-shard jobs, not just all models:

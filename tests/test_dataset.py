@@ -217,6 +217,8 @@ def test_evaluate_model_script_lists_requested_models():
     assert {
         "claude-haiku-4-5",
         "claude-sonnet-4-6",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
         "gpt-5.4",
         "gpt-5.4-mini",
         "gpt-5.4-nano",
@@ -236,3 +238,16 @@ def test_evaluate_anthropic_script_help_runs_from_repo_checkout():
     )
 
     assert "Run a configured Anthropic model on Emoji-Bench prompts" in result.stdout
+
+
+def test_evaluate_gemini_script_help_runs_from_repo_checkout():
+    repo_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [sys.executable, "scripts/evaluate_gemini.py", "--help"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "Run a configured Gemini model on Emoji-Bench prompts" in result.stdout

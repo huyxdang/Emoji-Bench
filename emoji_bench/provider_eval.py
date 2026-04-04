@@ -32,7 +32,22 @@ PREDICTION_JSON_SCHEMA = {
 
 OPENAI_STRUCTURED_OUTPUT_RETRY_FLOOR = 200
 OPENAI_MAX_STRUCTURED_OUTPUT_RETRIES = 4
+GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"
+GEMINI_PREDICTION_JSON_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "has_error": {"type": "boolean"},
+        "error_step": {
+            "anyOf": [
+                {"type": "integer"},
+                {"type": "null"},
+            ]
+        },
+    },
+    "required": ["has_error", "error_step"],
+    "additionalProperties": False,
+}
 
 
 @dataclass(frozen=True)
@@ -67,7 +82,7 @@ class _MistralClient:
             method="POST",
         )
         try:
-            with urllib_request.urlopen(request, context=_mistral_ssl_context()) as response:
+            with urllib_request.urlopen(request, context=_api_ssl_context()) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib_error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace").strip()
@@ -77,7 +92,33 @@ class _MistralClient:
             raise RuntimeError(message) from exc
 
 
-def _mistral_ssl_context() -> ssl.SSLContext:
+@dataclass(frozen=True)
+class _GeminiClient:
+    api_key: str
+
+    def generate_content(self, *, model: str, options: dict[str, Any]) -> dict[str, Any]:
+        payload = json.dumps(options).encode("utf-8")
+        request = urllib_request.Request(
+            f"{GEMINI_API_BASE_URL}/{model}:generateContent",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key,
+            },
+            method="POST",
+        )
+        try:
+            with urllib_request.urlopen(request, context=_api_ssl_context()) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib_error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace").strip()
+            message = f"Gemini API request failed with status {exc.code}"
+            if body:
+                message += f": {body}"
+            raise RuntimeError(message) from exc
+
+
+def _api_ssl_context() -> ssl.SSLContext:
     try:
         import certifi
     except ImportError:
@@ -168,6 +209,32 @@ def build_mistral_request_options(
     }
 
 
+def build_gemini_request_options(
+    *,
+    model_config: ModelConfig,
+    prompt: str,
+    max_output_tokens: int,
+) -> dict[str, Any]:
+    return {
+        "systemInstruction": {
+            "parts": [
+                {"text": SYSTEM_PROMPT},
+            ]
+        },
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": prompt}],
+            }
+        ],
+        "generationConfig": {
+            "maxOutputTokens": max_output_tokens,
+            "responseMimeType": "application/json",
+            "responseJsonSchema": GEMINI_PREDICTION_JSON_SCHEMA,
+        },
+    }
+
+
 def resolve_api_key(
     *,
     model_config: ModelConfig,
@@ -207,6 +274,9 @@ def make_client(provider: ProviderName, *, api_key: str) -> Any:
     if provider == "mistral":
         return _MistralClient(api_key=api_key)
 
+    if provider == "gemini":
+        return _GeminiClient(api_key=api_key)
+
     raise ValueError(f"Unsupported provider: {provider}")
 
 
@@ -237,6 +307,13 @@ def request_prediction(
         )
     if model_config.provider == "mistral":
         return _request_mistral_prediction(
+            client=client,
+            model_config=model_config,
+            prompt=prompt,
+            max_output_tokens=max_output_tokens,
+        )
+    if model_config.provider == "gemini":
+        return _request_gemini_prediction(
             client=client,
             model_config=model_config,
             prompt=prompt,
@@ -339,6 +416,31 @@ def _request_mistral_prediction(
     raise ValueError("No structured output returned by the Mistral model")
 
 
+def _request_gemini_prediction(
+    *,
+    client: Any,
+    model_config: ModelConfig,
+    prompt: str,
+    max_output_tokens: int,
+) -> ProviderResponse:
+    options = build_gemini_request_options(
+        model_config=model_config,
+        prompt=prompt,
+        max_output_tokens=max_output_tokens,
+    )
+    response = client.generate_content(model=model_config.api_model, options=options)
+    raw_output_text = _gemini_output_text(response)
+    if raw_output_text:
+        return ProviderResponse(
+            prediction_payload=json.loads(raw_output_text),
+            response_id=response.get("responseId"),
+            raw_output_text=raw_output_text,
+            usage=_extract_gemini_usage(response),
+        )
+
+    raise ValueError(_gemini_missing_output_error(response=response))
+
+
 def _anthropic_text_output(response: Any) -> str:
     blocks = getattr(response, "content", None) or ()
     texts: list[str] = []
@@ -368,6 +470,29 @@ def _mistral_output_text(response: dict[str, Any]) -> str:
                     texts.append(text)
         return "\n".join(texts).strip()
     return ""
+
+
+def _gemini_output_text(response: dict[str, Any]) -> str:
+    candidates = response.get("candidates") or ()
+    if not candidates:
+        return ""
+
+    content = candidates[0].get("content") or {}
+    parts = content.get("parts")
+    if not isinstance(parts, list):
+        return ""
+
+    texts: list[str] = []
+    for part in parts:
+        if not isinstance(part, dict):
+            continue
+        text = part.get("text")
+        if isinstance(text, str):
+            stripped = text.strip()
+            if stripped:
+                texts.append(stripped)
+
+    return "\n".join(texts).strip()
 
 
 def _make_prediction_model():
@@ -492,6 +617,29 @@ def _openai_missing_output_error(*, response: Any) -> str:
     return message
 
 
+def _gemini_missing_output_error(*, response: dict[str, Any]) -> str:
+    prompt_feedback = response.get("promptFeedback")
+    prompt_block_reason = None
+    if isinstance(prompt_feedback, dict):
+        prompt_block_reason = prompt_feedback.get("blockReason")
+
+    candidates = response.get("candidates") or ()
+    finish_reason = None
+    if candidates and isinstance(candidates[0], dict):
+        finish_reason = candidates[0].get("finishReason")
+
+    details: list[str] = []
+    if prompt_block_reason is not None:
+        details.append(f"prompt_block_reason={prompt_block_reason}")
+    if finish_reason is not None:
+        details.append(f"finish_reason={finish_reason}")
+
+    message = "No structured output returned by the Gemini model"
+    if details:
+        message += " (" + ", ".join(details) + ")"
+    return message
+
+
 def _extract_openai_usage(response: Any) -> ProviderUsage | None:
     usage = getattr(response, "usage", None)
     if usage is None:
@@ -546,5 +694,23 @@ def _extract_mistral_usage(response: dict[str, Any]) -> ProviderUsage | None:
         input_tokens=input_tokens if isinstance(input_tokens, int) else None,
         output_tokens=output_tokens if isinstance(output_tokens, int) else None,
         reasoning_tokens=None,
+        total_tokens=total_tokens if isinstance(total_tokens, int) else None,
+    )
+
+
+def _extract_gemini_usage(response: dict[str, Any]) -> ProviderUsage | None:
+    usage = response.get("usageMetadata")
+    if not isinstance(usage, dict):
+        return None
+
+    input_tokens = usage.get("promptTokenCount")
+    output_tokens = usage.get("candidatesTokenCount")
+    thoughts_tokens = usage.get("thoughtsTokenCount")
+    total_tokens = usage.get("totalTokenCount")
+
+    return ProviderUsage(
+        input_tokens=input_tokens if isinstance(input_tokens, int) else None,
+        output_tokens=output_tokens if isinstance(output_tokens, int) else None,
+        reasoning_tokens=thoughts_tokens if isinstance(thoughts_tokens, int) else None,
         total_tokens=total_tokens if isinstance(total_tokens, int) else None,
     )

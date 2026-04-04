@@ -13,6 +13,7 @@ from emoji_bench.eval_cli import main
 
 if __name__ == "__main__":
     main(
-        description="Run a configured OpenAI, Anthropic, Gemini, or Mistral model on Emoji-Bench prompts and score has_error / error_step.",
-        default_model="gpt-5.4-mini",
+        description="Run a configured Gemini model on Emoji-Bench prompts and score has_error / error_step.",
+        allowed_providers=("gemini",),
+        default_model="gemini-3-flash-preview",
     )
