@@ -437,11 +437,7 @@ By error type:
 
 Joint accuracy is essentially flat across difficulty levels (~47-51%), suggesting `gpt-4.1-mini` is near its floor on this task regardless of problem complexity. Stronger models may show more separation.
 
-README should be like: 
-- What this is about 
-- How to run this
-
-[FE]
-- When hovering around the "Emoji Bench", emojis should be spawing out. lmao.
-
-- Should be like a dropdown
+Command to run Gemini Models: 
+`bash
+LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=4 ./scripts/run.sh gemini-3-flash-preview gemini-3.1-pro-preview
+`
