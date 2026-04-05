@@ -71,6 +71,22 @@ model_output_dir() {
   echo "${EVALS_DIR}/$(dataset_name)-$(slugify "${model}")"
 }
 
+model_report_inputs() {
+  local model="$1"
+  local output_dir
+  output_dir="$(model_output_dir "${model}")"
+
+  if [[ "${SHARDS_PER_MODEL_VALUE}" -le 1 ]]; then
+    echo "${output_dir}"
+    return 0
+  fi
+
+  local shard_index
+  for (( shard_index=0; shard_index<SHARDS_PER_MODEL_VALUE; shard_index++ )); do
+    printf '%s/shard-%02d-of-%02d\n' "${output_dir}" "${shard_index}" "${SHARDS_PER_MODEL_VALUE}"
+  done
+}
+
 format_job_label() {
   local model="$1"
   local shard_index="$2"
@@ -253,7 +269,9 @@ done
 
 REPORT_INPUTS=()
 for model in "${MODELS[@]}"; do
-  REPORT_INPUTS+=("$(model_output_dir "${model}")")
+  while IFS= read -r report_input; do
+    REPORT_INPUTS+=("${report_input}")
+  done < <(model_report_inputs "${model}")
 done
 
 echo
