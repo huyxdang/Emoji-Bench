@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATASET_REPO_ID="${DATASET_REPO_ID:-huyxdang/emoji-bench-mixed-2000}"
-DATASET_DIR="${DATASET_DIR:-artifacts/emoji-bench-mixed-2000}"
-REPORT_DIR="${REPORT_DIR:-artifacts/eval-report-smoke}"
-LIMIT="${LIMIT:-2}"
+DATASET_REPO_ID="${DATASET_REPO_ID:-huyxdang/emoji-bench-e-reconv-1000}"
+DATASET_DIR="${DATASET_DIR:-artifacts/emoji-bench-e-reconv-1000}"
+EVALS_DIR="${EVALS_DIR:-artifacts/evals}"
+REPORT_DIR="${REPORT_DIR:-artifacts/eval-report-e-reconv-1000}"
+LIMIT="${LIMIT:-all}"
 REQUEST_DELAY_SECONDS="${REQUEST_DELAY_SECONDS:-0.2}"
 MAX_OUTPUT_TOKENS="${MAX_OUTPUT_TOKENS:-}"
 RETRY_DELAY_SECONDS="${RETRY_DELAY_SECONDS:-2.0}"
@@ -55,6 +56,19 @@ resolve_parallelism() {
 
   echo "MODEL_PARALLELISM must be a positive integer or 'all'" >&2
   exit 1
+}
+
+slugify() {
+  echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
+}
+
+dataset_name() {
+  basename "${DATASET_DIR}"
+}
+
+model_output_dir() {
+  local model="$1"
+  echo "${EVALS_DIR}/$(dataset_name)-$(slugify "${model}")"
 }
 
 format_job_label() {
@@ -120,11 +134,15 @@ run_model() {
   echo
   echo "Running model: ${job_label}"
 
+  local output_dir
+  output_dir="$(model_output_dir "${model}")"
+
   cmd=(
     uv run --extra openai --extra anthropic
     python scripts/evaluate_model.py
     "${DATASET_DIR}"
     --model "${model}"
+    --output-dir "${output_dir}"
     --num-shards "${num_shards}"
     --shard-index "${shard_index}"
     --request-delay-seconds "${REQUEST_DELAY_SECONDS}"
@@ -233,9 +251,14 @@ while [[ "${#PIDS[@]}" -gt 0 ]]; do
   sleep 1
 done
 
+REPORT_INPUTS=()
+for model in "${MODELS[@]}"; do
+  REPORT_INPUTS+=("$(model_output_dir "${model}")")
+done
+
 echo
-echo "Building combined report in ${REPORT_DIR}"
-python3 scripts/analyze_evals.py artifacts/evals --output-dir "${REPORT_DIR}"
+echo "Building scoped reconvergent report in ${REPORT_DIR}"
+python3 scripts/analyze_evals.py "${REPORT_INPUTS[@]}" --output-dir "${REPORT_DIR}"
 
 echo
 echo "Done."

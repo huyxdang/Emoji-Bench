@@ -234,3 +234,12 @@ Results on the full 1,998-example `emoji-bench-mixed-2000` dataset across 8 mode
 **E-CASC (cascading errors) is easy for reasoning models, harder for others.** GPT-5.4/5.4-mini/5.4-nano detect cascading errors at 99-100%. The chain recomputation that makes E-CASC locally consistent after the root error does not fool models that verify from the start. Non-reasoning models detect E-CASC at 48-80%, suggesting they rely on local consistency checks and miss the upstream violation.
 
 **Difficulty scaling is modest but real.** GPT-5.4 drops ~12pp from easy (96.2%) to expert (84.2%). Other models show only 2-7pp spread -- they are near their floor regardless of problem complexity, consistent with the hypothesis that they are not performing systematic constraint evaluation.
+
+DATASET_REPO_ID=huyxdang/emoji-bench-e-reconv-1000 \
+  DATASET_DIR=artifacts/emoji-bench-e-reconv-1000 \
+  REPORT_DIR=artifacts/eval-report-e-reconv-1000 \
+  LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 \
+  ./scripts/run.sh \
+    gpt-4.1-mini gpt-5.4 gpt-5.4-mini gpt-5.4-nano \
+    claude-sonnet-4-6 claude-haiku-4-5 \
+    mistral-large-2512 mistral-medium-2508

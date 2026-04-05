@@ -61,6 +61,15 @@ def test_prompt_format_contains_transform():
         assert "Distribution property" in prompt
 
 
+def test_prompt_format_explains_table_operand_order():
+    system = generate_system(n_symbols=3, random_seed=42)
+    prompt = format_system_for_prompt(system)
+    op_symbol = system.base_operations[0].symbol_id
+
+    assert "row is the left operand" in prompt
+    assert f"row a and column b means a {op_symbol} b" in prompt
+
+
 def test_prompt_format_derived_ops_use_base_symbol():
     """Derived op definitions should use ⊕ not 'op0'."""
     system = generate_system(
@@ -83,6 +92,7 @@ def test_prompt_format_golden_output_fixed_seed():
     assert prompt == """Symbols: {🪸, 🪩, 🧄, 🍄}
 
 Operation ⊕ (defined by table):
+In the table below, the row is the left operand and the column is the right operand. For example, row a and column b means a ⊕ b.
 
 | ⊕ | 🪸 | 🪩 | 🧄 | 🍄 |
 |---|---|---|---|---|

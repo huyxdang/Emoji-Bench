@@ -144,7 +144,14 @@ def _format_op_table(op: OperationTable) -> str:
         cells = " | ".join(op.table[(row_sym, col_sym)].emoji for col_sym in syms)
         rows.append(f"| **{row_sym.emoji}** | {cells} |")
 
-    return f"Operation {op.symbol_id} (defined by table):\n\n{header}\n{separator}\n" + "\n".join(rows)
+    note = (
+        "In the table below, the row is the left operand and the column is the "
+        f"right operand. For example, row a and column b means a {op.symbol_id} b."
+    )
+    return (
+        f"Operation {op.symbol_id} (defined by table):\n"
+        f"{note}\n\n{header}\n{separator}\n" + "\n".join(rows)
+    )
 
 
 def format_system_for_prompt_full(system: FormalSystem) -> str:
