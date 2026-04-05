@@ -20,3 +20,4 @@ Repo mapping:
 - `emoji_bench/provider_eval.py` uses `client.messages.create(...)`.
 - Structured output is parsed from the returned text block as JSON.
 - `emoji_bench/eval_cli.py` exposes `--thinking-budget-tokens` only on Anthropic-capable entrypoints.
+- Emoji-Bench's reasoning-labeled Sonnet 4.6 variant relies on the same `thinking` object and defaults to the minimum 1024-token budget when no CLI override is provided.

@@ -19,6 +19,7 @@ MODELS=(
   gpt-5.4-mini
   gpt-5.4-nano
   claude-sonnet-4-6
+  claude-sonnet-4-6-reasoning
   claude-haiku-4-5
   mistral-large-2512
   mistral-medium-2508

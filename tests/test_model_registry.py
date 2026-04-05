@@ -20,6 +20,7 @@ def test_requested_model_configs_are_present():
     assert {
         "claude-haiku-4-5",
         "claude-sonnet-4-6",
+        "claude-sonnet-4-6-reasoning",
         "gemini-3-flash-preview",
         "gemini-3.1-pro-preview",
         "gpt-5.4",
@@ -42,9 +43,9 @@ def test_gpt54_models_default_to_medium_reasoning():
 
 
 def test_all_configured_models_use_expected_default_max_output_tokens():
-    assert DEFAULT_MAX_OUTPUT_TOKENS == 512
+    assert DEFAULT_MAX_OUTPUT_TOKENS == 2048
     for config in MODEL_CONFIGS.values():
-        expected = 2048 if config.key == "gpt-5.4-nano" else DEFAULT_MAX_OUTPUT_TOKENS
+        expected = DEFAULT_MAX_OUTPUT_TOKENS
         assert config.default_max_output_tokens == expected
 
 
@@ -78,6 +79,19 @@ def test_build_anthropic_request_options_includes_json_schema_and_optional_think
     assert options["max_tokens"] == 77
     assert options["output_config"]["format"]["schema"] == PREDICTION_JSON_SCHEMA
     assert options["thinking"] == {"type": "enabled", "budget_tokens": 32}
+
+
+def test_reasoning_sonnet_enables_anthropic_thinking_by_default():
+    config = get_model_config("claude-sonnet-4-6-reasoning")
+    options = build_anthropic_request_options(
+        model_config=config,
+        prompt="example prompt",
+        max_output_tokens=2048,
+    )
+
+    assert config.label == "Claude Sonnet 4.6 (reasoning)"
+    assert options["model"] == "claude-sonnet-4-6"
+    assert options["thinking"] == {"type": "enabled", "budget_tokens": 1024}
 
 
 def test_build_anthropic_request_options_rejects_invalid_thinking_budget():

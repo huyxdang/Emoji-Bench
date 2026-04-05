@@ -105,6 +105,21 @@ MODEL_CONFIGS: dict[str, ModelConfig] = {
         anthropic_thinking=AnthropicThinkingConfig(enabled=False),
         notes="Extended thinking is supported by the model, but disabled by default in this evaluator.",
     ),
+    "claude-sonnet-4-6-reasoning": ModelConfig(
+        key="claude-sonnet-4-6-reasoning",
+        label="Claude Sonnet 4.6 (reasoning)",
+        provider="anthropic",
+        api_model="claude-sonnet-4-6",
+        docs_url="https://platform.claude.com/docs/en/about-claude/models/overview",
+        api_key_env_var="ANTHROPIC_API_KEY",
+        default_max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+        provider_max_output_tokens=64_000,
+        anthropic_thinking=AnthropicThinkingConfig(enabled=True, budget_tokens=1024),
+        notes=(
+            "Uses Claude Sonnet 4.6 with Anthropic extended thinking enabled. "
+            "Configured with the minimum 1024-token thinking budget by default."
+        ),
+    ),
     "claude-haiku-4-5": ModelConfig(
         key="claude-haiku-4-5",
         label="Claude Haiku 4.5",
