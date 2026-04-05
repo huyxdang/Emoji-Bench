@@ -93,9 +93,13 @@
        HERO
     ========================================================= */
     .hero {
-      padding: 96px 24px 32px;
+      background: var(--surface);
+    }
+
+    .hero-body {
       max-width: var(--content);
       margin: 0 auto;
+      padding: 96px 24px 64px;
     }
 
     .hero-title-wrap {
@@ -166,30 +170,43 @@
 
     @media (prefers-reduced-motion: reduce) { .floater { display: none; } }
 
-    .hero .lead {
+    .hero-byline {
+      font-size: 0.88rem;
       color: var(--muted);
-      font-size: 1.08rem;
-      line-height: 1.78;
-      max-width: 54ch;
-      margin-bottom: 26px;
+      margin-bottom: 18px;
+      margin-top: 10px;
     }
+
+    .hero-byline a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .hero-byline a:hover { color: var(--ink); opacity: 1; }
 
     .hero-links {
       display: flex; gap: 22px; flex-wrap: wrap;
-      margin-bottom: 48px;
+      margin-bottom: 32px;
     }
 
     .hero-links a {
       display: inline-flex; align-items: center; gap: 7px;
       font-size: 0.88rem; font-weight: 600;
       color: var(--accent);
-      border-bottom: 1.5px solid rgba(139,92,246,0.25);
-      padding-bottom: 1px;
-      transition: border-color 150ms;
       text-decoration: none;
+      transition: opacity 150ms;
     }
 
-    .hero-links a:hover { border-color: var(--accent); opacity: 0.8; }
+    .hero-links a:hover { opacity: 0.7; }
+
+    .hero .lead {
+      font-family: "Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+      color: var(--muted);
+      font-size: clamp(1.15rem, 2.5vw, 1.45rem);
+      line-height: 1.3;
+      margin-top: 10px;
+      margin-bottom: 0;
+    }
 
     /* =========================================================
        STATS ROW
@@ -225,6 +242,15 @@
       font-size: 0.7rem; font-weight: 700;
       letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--muted); margin-bottom: 8px;
+    }
+
+    .section-label::before {
+      content: '';
+      display: block;
+      width: 28px;
+      height: 2px;
+      background: var(--muted);
+      margin-bottom: 10px;
     }
 
     h2 {
@@ -584,46 +610,32 @@
        BENCHMARK (leaderboard — kept from index2.html)
     ========================================================= */
     .benchmark-controls {
-      display: flex; flex-direction: column;
-      gap: 10px; margin: 24px 0 8px;
+      display: flex; gap: 24px;
+      margin: 16px 0 20px;
+      border-bottom: 1px solid var(--faint);
+      padding-bottom: 12px;
     }
 
     .control-group {
-      display: flex; gap: 8px;
+      display: flex; gap: 2px;
       flex-wrap: wrap; align-items: center;
     }
 
-    .control-label {
-      font-size: 0.74rem; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--muted); margin-right: 4px;
-    }
+    .control-label { display: none; }
 
     .chip {
       appearance: none; border: none; background: none;
-      padding: 6px 12px; border-radius: 6px;
-      font: inherit; font-size: 0.82rem; font-weight: 600;
+      padding: 4px 10px;
+      font: inherit; font-size: 0.84rem; font-weight: 400;
       color: var(--muted); cursor: pointer;
-      transition: background 120ms, color 120ms;
+      border-bottom: 2px solid transparent;
+      transition: color 120ms, border-color 120ms;
     }
 
-    .chip:hover { background: rgba(0,0,0,0.05); color: var(--ink); }
-    .chip.is-active { background: var(--ink); color: var(--bg); }
+    .chip:hover { color: var(--ink); }
+    .chip.is-active { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
 
-    .chart-meta {
-      display: flex; justify-content: space-between;
-      align-items: flex-end; gap: 16px;
-      padding: 12px 0 16px;
-      font-size: 0.8rem; color: var(--muted);
-      border-bottom: 1px solid var(--faint);
-      margin-bottom: 16px;
-    }
-
-    .metric-copy strong {
-      display: block; color: var(--ink);
-      font-size: 0.88rem; margin-bottom: 2px;
-    }
-
+    .chart-meta { display: none; }
     .legend { display: flex; gap: 16px; flex-wrap: wrap; }
     .legend-item { display: inline-flex; align-items: center; gap: 6px; }
     .swatch { width: 8px; height: 8px; border-radius: 50%; }
@@ -795,23 +807,10 @@
 <body>
 
 <!-- ================================================================
-     TOPBAR
-================================================================ -->
-<div class="topbar">
-  <a class="topbar-brand" href="#top">Emoji-Bench</a>
-  <nav>
-    <a href="#idea">Idea</a>
-    <a href="#example">Example</a>
-    <a href="#finding">Finding</a>
-    <a href="#benchmark">Benchmark</a>
-    <a href="#dataset">Dataset</a>
-  </nav>
-</div>
-
-<!-- ================================================================
      HERO
 ================================================================ -->
 <header class="hero" id="top">
+<div class="hero-body">
   <div class="hero-title-wrap">
     <!-- Emoji floaters — rise from the title on load -->
     <span class="floater" style="--left:3%;  --delay:0s;    --drift:-22px; --size:1.5rem">🐙</span>
@@ -826,23 +825,29 @@
     <span class="floater" style="--left:20%; --delay:0.50s; --drift:-10px; --size:1.1rem">🔵</span>
     <span class="floater" style="--left:57%; --delay:0.17s; --drift: 18px; --size:1.3rem">🦋</span>
     <span class="floater" style="--left:6%;  --delay:0.55s; --drift: 12px; --size:1.0rem">🟠</span>
-    <h1>Emoji Bench</h1>
+    <h1>Emoji Bench <span id="hero-em">🌸</span></h1>
+    <p class="lead">Can models <em>really</em> self-detect errors?</p>
   </div>
-  <p class="lead">
-    Can a language model verify a reasoning chain step by step —
-    or does it just re-execute it and check the endpoint?
-  </p>
 
   <div class="hero-links">
+    <a href="#benchmark">
+      <i class="fa-solid fa-ranking-star"></i> Leaderboard
+    </a>
     <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">
       <i class="fa-brands fa-github"></i> GitHub
     </a>
     <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000" target="_blank" rel="noreferrer">
-      <svg width="16" height="16" viewBox="4 0 87 84" fill="currentColor" style="vertical-align:-2px" aria-hidden="true"><path d="M47.21 76.5a34.75 34.75 0 1 0 0-69.5 34.75 34.75 0 0 0 0 69.5Z" opacity=".15"/><path d="M81.96 41.75a34.75 34.75 0 1 0-69.5 0 34.75 34.75 0 0 0 69.5 0Zm-73.5 0a38.75 38.75 0 1 1 77.5 0 38.75 38.75 0 0 1-77.5 0Z"/><path d="M58.5 32.3c1.28.44 1.78 3.06 3.07 2.38a5 5 0 1 0-6.76-2.07c.61 1.15 2.55-.72 3.7-.32ZM34.95 32.3c-1.28.44-1.79 3.06-3.07 2.38a5 5 0 1 1 6.76-2.07c-.61 1.15-2.56-.72-3.7-.32Z"/><path d="M46.96 56.29c9.83 0 13-8.76 13-13.26 0-2.34-1.57-1.6-4.09-.36-2.33 1.15-5.46 2.74-8.9 2.74-7.19 0-13-6.88-13-2.38s3.16 13.26 13 13.26Z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="4 0 87 84" fill="currentColor" aria-hidden="true" style="vertical-align:-2px">
+        <path d="M47.21 76.5a34.75 34.75 0 1 0 0-69.5 34.75 34.75 0 0 0 0 69.5Z" opacity=".15"/>
+        <path d="M81.96 41.75a34.75 34.75 0 1 0-69.5 0 34.75 34.75 0 0 0 69.5 0Zm-73.5 0a38.75 38.75 0 1 1 77.5 0 38.75 38.75 0 0 1-77.5 0Z"/>
+        <path d="M58.5 32.3c1.28.44 1.78 3.06 3.07 2.38a5 5 0 1 0-6.76-2.07c.61 1.15 2.55-.72 3.7-.32ZM34.95 32.3c-1.28.44-1.79 3.06-3.07 2.38a5 5 0 1 1 6.76-2.07c-.61 1.15-2.56-.72-3.7-.32Z"/>
+        <path d="M46.96 56.29c9.83 0 13-8.76 13-13.26 0-2.34-1.57-1.6-4.09-.36-2.33 1.15-5.46 2.74-8.9 2.74-7.19 0-13-6.88-13-2.38s3.16 13.26 13 13.26Z"/>
+      </svg>
       Hugging Face
     </a>
   </div>
 
+</div>
 </header>
 
 <!-- ================================================================
@@ -903,7 +908,7 @@
 <!-- ================================================================
      SECTION: INTERACTIVE EXAMPLE
 ================================================================ -->
-<section class="section section--tinted" id="example">
+<section class="section" id="example">
   <div class="container">
     <div class="section-label">Try It Yourself</div>
     <h2>Walk through a real benchmark instance.</h2>
@@ -960,9 +965,42 @@
 </section>
 
 <!-- ================================================================
+     SECTION: BENCHMARK LEADERBOARD
+================================================================ -->
+<section class="section" id="benchmark">
+  <div class="container">
+    <div class="section-label">Leaderboard</div>
+    <h2>Reasoning models win.</h2>
+
+    <div class="benchmark-controls">
+      <div class="control-group" id="metricButtons">
+        <span class="control-label">Metric</span>
+      </div>
+      <div class="control-group" id="difficultyButtons">
+        <span class="control-label">Difficulty</span>
+      </div>
+    </div>
+
+    <div class="chart-meta">
+      <div class="metric-copy">
+        <strong id="metricLabel">Detection Rate</strong>
+        <span id="metricDescription">Share of examples where the model correctly identifies that an error is present.</span>
+      </div>
+    </div>
+
+    <div class="benchmark-chart" id="benchmarkChart" aria-live="polite"></div>
+
+    <p class="benchmark-note">
+      Step accuracy is reported directly from the evaluation. On this dataset it equals joint accuracy —
+      every example contains an error, and the task requires both detecting it and naming the first bad step.
+    </p>
+  </div>
+</section>
+
+<!-- ================================================================
      SECTION: THE FINDING
 ================================================================ -->
-<section class="section section--tinted" id="finding">
+<section class="section" id="finding">
   <div class="container">
     <div class="section-label">The Finding</div>
     <h2>Detection and localization diverge sharply.</h2>
@@ -1002,88 +1040,6 @@
 </section>
 
 <!-- ================================================================
-     SECTION: BENCHMARK LEADERBOARD
-================================================================ -->
-<section class="section" id="benchmark">
-  <div class="container">
-    <div class="section-label">Leaderboard</div>
-    <h2>Reasoning models are winning.</h2>
-    <p class="section-desc">
-      Switch between detection rate and step accuracy.
-    </p>
-
-    <div class="benchmark-controls">
-      <div class="control-group" id="metricButtons">
-        <span class="control-label">Metric</span>
-      </div>
-      <div class="control-group" id="difficultyButtons">
-        <span class="control-label">Difficulty</span>
-      </div>
-    </div>
-
-    <div class="chart-meta">
-      <div class="metric-copy">
-        <strong id="metricLabel">Detection Rate</strong>
-        <span id="metricDescription">Share of examples where the model correctly identifies that an error is present.</span>
-      </div>
-      <div class="legend">
-        <span class="legend-item"><span class="swatch" style="background:var(--openai)"></span>OpenAI</span>
-        <span class="legend-item"><span class="swatch" style="background:var(--anthropic)"></span>Anthropic</span>
-        <span class="legend-item"><span class="swatch" style="background:var(--mistral)"></span>Mistral</span>
-      </div>
-    </div>
-
-    <div class="benchmark-chart" id="benchmarkChart" aria-live="polite"></div>
-
-    <p class="benchmark-note">
-      Step accuracy is reported directly from the evaluation. On this dataset it equals joint accuracy —
-      every example contains an error, and the task requires both detecting it and naming the first bad step.
-    </p>
-  </div>
-</section>
-
-<!-- ================================================================
-     SECTION: DATASET
-================================================================ -->
-<section class="section section--tinted" id="dataset">
-  <div class="container">
-    <div class="section-label">Dataset</div>
-    <h2>Open data, open code.</h2>
-    <p class="section-desc">
-      The benchmark, generation pipeline, evaluation scripts, and full model predictions
-      are publicly available.
-    </p>
-
-    <div class="dataset-cards">
-      <a class="dataset-card" href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">
-        <div class="dataset-card-icon"><i class="fa-brands fa-github"></i></div>
-        <div class="dataset-card-title">GitHub Repository</div>
-        <div class="dataset-card-desc">Benchmark code, error injectors, evaluation scripts, and generation pipeline.</div>
-      </a>
-      <a class="dataset-card" href="https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000" target="_blank" rel="noreferrer">
-        <div class="dataset-card-icon">
-          <svg width="22" height="22" viewBox="4 0 87 84" fill="currentColor" aria-hidden="true"><path d="M47.21 76.5a34.75 34.75 0 1 0 0-69.5 34.75 34.75 0 0 0 0 69.5Z" opacity=".15"/><path d="M81.96 41.75a34.75 34.75 0 1 0-69.5 0 34.75 34.75 0 0 0 69.5 0Zm-73.5 0a38.75 38.75 0 1 1 77.5 0 38.75 38.75 0 0 1-77.5 0Z"/><path d="M58.5 32.3c1.28.44 1.78 3.06 3.07 2.38a5 5 0 1 0-6.76-2.07c.61 1.15 2.55-.72 3.7-.32ZM34.95 32.3c-1.28.44-1.79 3.06-3.07 2.38a5 5 0 1 1 6.76-2.07c-.61 1.15-2.56-.72-3.7-.32Z"/><path d="M46.96 56.29c9.83 0 13-8.76 13-13.26 0-2.34-1.57-1.6-4.09-.36-2.33 1.15-5.46 2.74-8.9 2.74-7.19 0-13-6.88-13-2.38s3.16 13.26 13 13.26Z"/></svg>
-        </div>
-        <div class="dataset-card-title">Hugging Face Dataset</div>
-        <div class="dataset-card-desc">1,000 reconvergent test instances with full model predictions and reports.</div>
-      </a>
-    </div>
-
-    <div class="section-label">Cite</div>
-    <div class="citation-wrap">
-      <div class="citation-block" id="bibtex-block">@misc{emoji-bench-2026,
-  title   = {Emoji-Bench: Step-Level Error Detection
-             in Reconvergent Formal Systems},
-  author  = {Dang, Huy},
-  year    = {2026},
-  url     = {https://github.com/huyxdang/Emoji-Bench}
-}</div>
-      <button class="copy-btn" id="copyBibBtn" aria-label="Copy BibTeX">Copy</button>
-    </div>
-  </div>
-</section>
-
-<!-- ================================================================
      FOOTER
 ================================================================ -->
 <div class="container">
@@ -1101,6 +1057,26 @@
 ================================================================ -->
 <script>
 'use strict';
+
+/* ------------------------------------------------------------------
+   HERO EMOJI SWAP — change the title emoji each time hero re-enters view
+------------------------------------------------------------------ */
+(function () {
+  var POOL = ['🐙','🪬','🫑','🔵','⭐','🌙','🦊','🔮','🌺','🍄','🦋','🟠','🔺','🌀','🌸'];
+  var span = document.getElementById('hero-em');
+  var hero = document.querySelector('.hero');
+  if (!span || !hero) return;
+
+  var seenFirst = false;
+
+  new IntersectionObserver(function (entries) {
+    if (!entries[0].isIntersecting) return;
+    if (!seenFirst) { seenFirst = true; return; }
+    var current = span.textContent;
+    var choices = POOL.filter(function (e) { return e !== current; });
+    span.textContent = choices[Math.floor(Math.random() * choices.length)];
+  }, { threshold: 0.3 }).observe(hero);
+}());
 
 /* ------------------------------------------------------------------
    INTERACTIVE EXAMPLE — state machine
@@ -1308,11 +1284,11 @@ const MODELS = [
 const METRIC_CONFIG = {
   detection: {
     label: 'Detection Rate',
-    description: 'Share of examples where the model correctly identifies that an error is present.'
+    description: 'The model correctly identifies that an error is present.'
   },
   step: {
     label: 'Step Accuracy',
-    description: 'Share of examples where the model identifies the correct first wrong step.'
+    description: 'The model identifies the correct first wrong step.'
   }
 };
 
@@ -1406,7 +1382,10 @@ function renderBenchmarkChart() {
     elChart.appendChild(row);
   });
 
-  // Animate
+  if (benchmarkVisible) animateBars();
+}
+
+function animateBars() {
   requestAnimationFrame(() => {
     elChart.querySelectorAll('.benchmark-row').forEach(row => {
       row.classList.add('is-visible');
@@ -1414,6 +1393,17 @@ function renderBenchmarkChart() {
       if (fill) fill.style.width = fill.dataset.width + '%';
     });
   });
+}
+
+let benchmarkVisible = false;
+
+const benchSection = document.getElementById('benchmark');
+if (benchSection) {
+  new IntersectionObserver(entries => {
+    if (!entries[0].isIntersecting) return;
+    benchmarkVisible = true;
+    animateBars();
+  }, { threshold: 0.15 }).observe(benchSection);
 }
 
 function refreshLeaderboard() {
