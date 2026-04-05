@@ -30,7 +30,7 @@ def format_chain(chain: DerivationChain, system: FormalSystem) -> str:
 
 
 TASK_PROMPT = """\
-Check whether your working out contains an error.
+Check whether your working out contains an error. It may or may not contain an error. 
 
 Return:
 1. `has_error`: yes or no
