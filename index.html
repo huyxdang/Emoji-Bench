@@ -3,28 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Emoji-Bench</title>
-  <meta
-    name="description"
-    content="Emoji-Bench measures whether language models can detect reasoning errors inside genuinely novel formal systems."
-  />
+  <title>Emoji-Bench — Step-Level Error Detection in Formal Systems</title>
+  <meta name="description" content="Emoji-Bench tests whether language models can verify reasoning chains step by step, isolating the reconvergent case where re-execution fails." />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
   <style>
+    /* =========================================================
+       BASE
+    ========================================================= */
     :root {
-      --bg: #f5efea;
-      --ink: #1a1a1a;
-      --muted: #7a7067;
-      --faint: rgba(0, 0, 0, 0.06);
-      --accent: #8b5cf6;
-      --accent-hover: #6d28d9;
-      --openai: #1f9d8b;
-      --anthropic: #96633f;
-      --mistral: #d85732;
-      --content: 700px;
-      --wide: 880px;
+      --bg:       #f5efea;
+      --ink:      #1a1a1a;
+      --muted:    #7a7067;
+      --faint:    rgba(0,0,0,0.06);
+      --faint2:   rgba(0,0,0,0.10);
+      --accent:   #8b5cf6;
+      --gold:     #b8860b;
+      --gold-bg:  rgba(184,134,11,0.06);
+      --gold-bdr: rgba(184,134,11,0.35);
+      --red:      #a83228;
+      --red-bg:   rgba(168,50,40,0.07);
+      --red-bdr:  rgba(168,50,40,0.30);
+      --green:    #2d7a52;
+      --green-bg: rgba(45,122,82,0.07);
+      --green-bdr:rgba(45,122,82,0.30);
+      --surface:  #ede5dc;
+      --openai:   #1f9d8b;
+      --anthropic:#96633f;
+      --mistral:  #d85732;
+      --content:  700px;
+      --wide:     920px;
     }
 
-    * { box-sizing: border-box; margin: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 
@@ -37,148 +47,592 @@
     }
 
     a { color: var(--accent); text-decoration: none; }
-    a:hover { color: var(--accent-hover); }
+    a:hover { opacity: 0.75; }
 
-    /* ---- Layout ---- */
+    code {
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.92em;
+      background: rgba(0,0,0,0.05);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
 
-    .container { max-width: var(--content); margin: 0 auto; padding: 0 24px; }
-    .container.wide { max-width: var(--wide); }
+    .container       { max-width: var(--content); margin: 0 auto; padding: 0 24px; }
+    .container.wide  { max-width: var(--wide); }
 
-    /* ---- Top bar ---- */
-
+    /* =========================================================
+       TOPBAR
+    ========================================================= */
     .topbar {
-      position: sticky; top: 0; z-index: 10;
-      padding: 16px 24px;
+      position: sticky; top: 0; z-index: 100;
+      padding: 14px 24px;
       display: flex; align-items: center; justify-content: space-between;
-      background: rgba(245, 239, 234, 0.85);
-      backdrop-filter: blur(12px);
+      background: rgba(245,239,234,0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--faint);
     }
 
     .topbar-brand {
-      font-weight: 700;
-      font-size: 0.9rem;
-      letter-spacing: 0.02em;
-      color: var(--ink);
+      font-weight: 700; font-size: 0.88rem;
+      letter-spacing: 0.02em; color: var(--ink);
+      text-decoration: none;
     }
 
-    .topbar nav { display: flex; gap: 24px; }
+    .topbar nav { display: flex; gap: 22px; }
 
     .topbar nav a {
-      color: var(--muted);
-      font-size: 0.875rem;
+      color: var(--muted); font-size: 0.82rem;
       text-decoration: none;
       transition: color 120ms;
     }
 
-    .topbar nav a:hover { color: var(--ink); }
+    .topbar nav a:hover { color: var(--ink); opacity: 1; }
 
-    /* ---- Hero ---- */
-
+    /* =========================================================
+       HERO
+    ========================================================= */
     .hero {
-      padding: 80px 24px 64px;
+      padding: 96px 24px 64px;
       max-width: var(--content);
       margin: 0 auto;
     }
 
-    .hero h1 {
-      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-      font-size: clamp(2.4rem, 5vw, 3.4rem);
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      margin-bottom: 20px;
+    .hero-title-wrap {
+      position: relative;
+      display: block;
+      margin-bottom: 22px;
+      overflow: visible;
     }
+
+    .hero h1 {
+      font-family: "Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+      font-size: clamp(2.8rem, 6.5vw, 4rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Emoji floaters */
+    .floater {
+      position: absolute;
+      top: 40%;
+      left: var(--left, 50%);
+      font-size: var(--size, 1.35rem);
+      line-height: 1;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+      opacity: 0;
+      animation: emoji-rise 2.2s ease-out var(--delay, 0s) both;
+    }
+
+    @keyframes emoji-rise {
+      0%   { opacity: 0;    transform: translateX(-50%) translateY(0px); }
+      18%  { opacity: 0.88; }
+      85%  { opacity: 0.15; }
+      100% { opacity: 0;    transform: translateX(calc(-50% + var(--drift, 0px))) translateY(-170px); }
+    }
+
+    @keyframes hover-rise {
+      0%   { opacity: 0;    transform: translateX(-50%) translateY(-50%); }
+      15%  { opacity: 0.9; }
+      100% { opacity: 0;    transform: translateX(calc(-50% + var(--h-drift, 0px))) translateY(calc(-50% - 150px)); }
+    }
+
+    /* Ghost teaser — lower opacity, slower, same path */
+    @keyframes teaser-rise {
+      0%   { opacity: 0;    transform: translateX(-50%) translateY(-50%); }
+      20%  { opacity: 0.38; }
+      100% { opacity: 0;    transform: translateX(calc(-50% + var(--h-drift, 0px))) translateY(calc(-50% - 120px)); }
+    }
+
+    /* "↑ hover" nudge label */
+    .hover-hint {
+      display: inline-block;
+      font-size: 0.68rem;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      opacity: 0;
+      margin-top: -8px;
+      margin-bottom: 30px;
+      pointer-events: none;
+      animation: hint-appear 0.5s ease-out 2.6s forwards;
+      transition: opacity 0.35s ease;
+    }
+
+    @keyframes hint-appear { to { opacity: 0.5; } }
+
+    @media (prefers-reduced-motion: reduce) { .floater { display: none; } }
 
     .hero .lead {
       color: var(--muted);
-      font-size: 1.05rem;
-      line-height: 1.75;
-      max-width: 56ch;
+      font-size: 1.08rem;
+      line-height: 1.78;
+      max-width: 54ch;
+      margin-bottom: 26px;
     }
 
     .hero-links {
-      display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap;
+      display: flex; gap: 22px; flex-wrap: wrap;
+      margin-bottom: 48px;
     }
 
     .hero-links a {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 0.9rem; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 0.88rem; font-weight: 600;
+      color: var(--ink);
+      border-bottom: 1.5px solid rgba(0,0,0,0.18);
+      padding-bottom: 1px;
+      transition: border-color 150ms;
+      text-decoration: none;
     }
 
-    .hero-note {
-      margin-top: 32px; padding-top: 20px;
-      border-top: 1px solid var(--faint);
-      font-size: 0.85rem; color: var(--muted);
-    }
+    .hero-links a:hover { border-color: var(--ink); opacity: 1; }
 
-    /* ---- Stats row ---- */
-
+    /* =========================================================
+       STATS ROW
+    ========================================================= */
     .stats-row {
-      display: grid; grid-template-columns: repeat(4, 1fr);
+      display: grid; grid-template-columns: repeat(4,1fr);
       border-top: 1px solid var(--faint);
       border-bottom: 1px solid var(--faint);
-      padding: 28px 0;
-      margin-bottom: 64px;
+      padding: 22px 0;
     }
 
-    .stats-row .stat { text-align: center; }
+    .stat { text-align: center; }
 
-    .stats-row .stat-value {
+    .stat-value {
       display: block;
-      font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-      font-size: 2rem; font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1;
+      font-family: "Iowan Old Style","Palatino Linotype",Georgia,serif;
+      font-size: 1.75rem; font-weight: 700;
+      letter-spacing: -0.03em; line-height: 1;
     }
 
-    .stats-row .stat-label {
-      display: block;
-      margin-top: 6px;
-      color: var(--muted);
+    .stat-label {
+      display: block; margin-top: 6px;
+      color: var(--muted); font-size: 0.76rem; line-height: 1.4;
+    }
+
+    /* =========================================================
+       SECTIONS
+    ========================================================= */
+    .section         { padding: 80px 0; }
+    .section--tinted { background: var(--surface); }
+
+    .section-label {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px;
+    }
+
+    h2 {
+      font-family: "Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+      font-size: clamp(1.75rem, 3.5vw, 2.35rem);
+      line-height: 1.13; letter-spacing: -0.025em;
+      margin-bottom: 18px;
+    }
+
+    .section-desc {
+      color: var(--muted); line-height: 1.78;
+      max-width: 60ch; margin-bottom: 32px;
+    }
+
+    .prose p {
+      color: var(--muted); line-height: 1.82;
+      max-width: 66ch; margin-bottom: 16px;
+    }
+    .prose p:last-child { margin-bottom: 0; }
+    .prose strong { color: var(--ink); }
+
+    /* =========================================================
+       TWO-PATH DIAGRAM
+    ========================================================= */
+    .two-paths {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 18px; margin: 36px 0;
+    }
+
+    .path {
+      border: 1px solid var(--faint2);
+      border-radius: 8px; padding: 20px 22px;
+      background: rgba(255,255,255,0.35);
+    }
+
+    .path-label {
+      font-size: 0.74rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .path--wrong .path-label { color: var(--red); }
+    .path--right .path-label { color: var(--green); }
+
+    .path-steps {
+      display: flex; flex-direction: column;
+      gap: 7px; margin-bottom: 16px;
+    }
+
+    .path-step {
       font-size: 0.82rem;
+      padding: 6px 10px; border-radius: 4px;
+      font-family: "SFMono-Regular", Menlo, monospace;
+      background: rgba(0,0,0,0.03);
       line-height: 1.4;
     }
 
-    /* ---- Sections ---- */
+    .path-step.err  { background: var(--red-bg); color: var(--red); }
+    .path-step.flagged { background: var(--red-bg); color: var(--red); font-weight: 600; }
+    .path-step.dim  { opacity: 0.3; }
+    .path-step.result { font-weight: 600; }
 
-    section { margin-bottom: 72px; }
-
-    .section-label {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
+    .path-verdict {
+      font-size: 0.8rem; font-weight: 700;
+      padding: 7px 10px; border-radius: 4px;
     }
 
-    section h2 {
-      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
-      line-height: 1.15;
-      letter-spacing: -0.025em;
+    .path-verdict.wrong { background: var(--red-bg); color: var(--red); }
+    .path-verdict.right { background: var(--green-bg); color: var(--green); }
+
+    /* =========================================================
+       INTERACTIVE DEMO
+    ========================================================= */
+    .demo-card {
+      border: 1px solid var(--faint2);
+      border-radius: 10px; padding: 28px 30px;
+      background: rgba(255,255,255,0.55);
+      max-width: 640px;
+    }
+
+    .demo-phase-label {
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 14px;
+    }
+
+    /* Formal system table */
+    .demo-system { margin-bottom: 22px; }
+
+    .system-symbols {
+      font-size: 0.88rem; color: var(--muted);
       margin-bottom: 10px;
     }
 
-    section > p, section > .section-desc {
-      color: var(--muted);
-      line-height: 1.75;
-      max-width: 60ch;
+    .system-symbols .sym { font-size: 1.1em; }
+
+    .system-op-label {
+      font-size: 0.78rem; font-weight: 600;
+      color: var(--muted); letter-spacing: 0.03em;
+      margin-bottom: 8px;
     }
 
-    /* ---- Benchmark chart ---- */
+    .op-table {
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 1rem;
+    }
 
-    .benchmark-section { margin-bottom: 72px; }
+    .op-table th, .op-table td {
+      width: 46px; height: 38px;
+      text-align: center;
+      border: 1px solid var(--faint2);
+    }
 
-    .benchmark-controls {
+    .op-table th {
+      font-weight: 700; font-size: 0.85rem;
+      background: rgba(0,0,0,0.04);
+    }
+
+    .op-table td { font-size: 1.05rem; }
+
+    .system-start {
+      font-size: 0.86rem; color: var(--muted);
+    }
+
+    /* Demo steps */
+    .demo-steps {
+      display: flex; flex-direction: column;
+      gap: 6px; margin-bottom: 20px;
+    }
+
+    .demo-steps:empty { margin-bottom: 0; }
+
+    .step-item {
+      display: grid;
+      grid-template-columns: 52px 1fr 36px;
+      gap: 10px; align-items: start;
+      padding: 9px 12px; border-radius: 5px;
+      background: rgba(0,0,0,0.03);
+      font-size: 0.86rem; line-height: 1.45;
+      opacity: 0; transform: translateY(5px);
+      transition: opacity 300ms ease, transform 300ms ease;
+    }
+
+    .step-item.visible { opacity: 1; transform: translateY(0); }
+
+    .step-item.is-error {
+      background: var(--red-bg);
+      border-left: 2px solid var(--red-bdr);
+    }
+
+    .step-num {
+      font-size: 0.72rem; font-weight: 700;
+      color: var(--muted); margin-top: 1px;
+    }
+
+    .step-expr {
+      font-family: "SFMono-Regular", Menlo, monospace;
+      font-size: 0.95em;
+    }
+
+    .step-note {
+      font-size: 0.74rem; color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .step-badge {
+      font-size: 0.72rem; font-weight: 700;
+      padding: 2px 5px; border-radius: 3px;
+      text-align: center; white-space: nowrap;
+      margin-top: 1px; align-self: start;
+    }
+
+    .step-badge.unknown { opacity: 0; }
+    .step-badge.ok      { background: var(--green-bg); color: var(--green); }
+    .step-badge.error   { background: var(--red-bg); color: var(--red); }
+
+    /* Demo action area */
+    .demo-action { margin-top: 4px; }
+
+    .demo-btn {
+      appearance: none; border: none; cursor: pointer;
+      background: var(--ink); color: var(--bg);
+      font: inherit; font-size: 0.875rem; font-weight: 600;
+      padding: 10px 20px; border-radius: 6px;
+      transition: opacity 150ms;
+    }
+
+    .demo-btn:hover { opacity: 0.82; }
+
+    /* Demo question */
+    .demo-question {
+      border-top: 1px solid var(--faint);
+      padding-top: 20px; margin-top: 20px;
+    }
+
+    .demo-question.hidden { display: none; }
+
+    .question-text {
+      font-size: 0.93rem; line-height: 1.7;
+      color: var(--ink); margin-bottom: 16px;
+    }
+
+    .step-buttons {
       display: flex; gap: 8px; flex-wrap: wrap;
-      margin: 24px 0 8px;
+      margin-bottom: 12px;
     }
 
-    .benchmark-controls .divider {
-      width: 1px;
-      background: var(--faint);
-      margin: 2px 4px;
+    .step-btn {
+      appearance: none;
+      border: 1.5px solid var(--faint2);
+      background: none; cursor: pointer;
+      font: inherit; font-size: 0.84rem; font-weight: 600;
+      padding: 7px 16px; border-radius: 6px;
+      color: var(--ink);
+      transition: background 120ms, border-color 120ms;
+    }
+
+    .step-btn:hover:not(:disabled) { background: rgba(0,0,0,0.05); }
+    .step-btn:disabled { opacity: 0.4; cursor: default; }
+
+    .reveal-btn {
+      appearance: none; border: none; background: none;
+      cursor: pointer; font: inherit;
+      font-size: 0.8rem; color: var(--muted);
+      text-decoration: underline; text-underline-offset: 3px;
+      padding: 0;
+    }
+
+    .reveal-btn:hover { color: var(--ink); }
+
+    /* Demo result */
+    .demo-result { display: none; }
+    .demo-result.visible { display: block; }
+
+    .reveal-content {
+      border-top: 1px solid var(--faint);
+      padding-top: 20px; margin-top: 16px;
+      font-size: 0.87rem; line-height: 1.72;
+    }
+
+    .reveal-verdict {
+      font-weight: 700; font-size: 0.94rem;
+      margin-bottom: 10px; color: var(--ink);
+    }
+
+    .reveal-content p { color: var(--muted); margin-bottom: 8px; }
+    .reveal-content p:last-child { margin-bottom: 0; }
+
+    .key-insight {
+      margin-top: 14px; padding: 12px 16px;
+      border-left: 3px solid var(--gold);
+      background: var(--gold-bg);
+      border-radius: 0 5px 5px 0;
+      color: var(--muted);
+    }
+
+    .key-insight strong { color: var(--ink); }
+
+    /* =========================================================
+       ERROR TYPES
+    ========================================================= */
+    .error-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; margin-top: 32px;
+    }
+
+    .error-card {
+      border: 1px solid var(--faint2);
+      border-radius: 8px; padding: 20px 22px;
+      background: rgba(255,255,255,0.4);
+    }
+
+    .error-card--highlight {
+      border-color: var(--gold-bdr);
+      background: var(--gold-bg);
+    }
+
+    .error-code {
+      font-family: "SFMono-Regular", Menlo, monospace;
+      font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--muted); margin-bottom: 5px;
+    }
+
+    .error-card--highlight .error-code { color: var(--gold); }
+
+    .error-name {
+      font-family: "Iowan Old Style","Palatino Linotype",Georgia,serif;
+      font-size: 1.05rem; font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .error-desc {
+      font-size: 0.84rem; color: var(--muted); line-height: 1.62;
+    }
+
+    /* =========================================================
+       GAP / DUMBBELL CHART
+    ========================================================= */
+    .gap-legend {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      font-size: 0.76rem; color: var(--muted);
+      margin-bottom: 20px; align-items: center;
+    }
+
+    .gap-legend-item { display: flex; align-items: center; gap: 6px; }
+
+    .leg-dot-hollow {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid var(--muted);
+    }
+
+    .leg-dot-filled {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .gap-axis-row {
+      display: grid; grid-template-columns: 190px 1fr;
+      gap: 14px; margin-bottom: 4px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--faint);
+    }
+
+    .gap-axis-ticks {
+      display: flex; justify-content: space-between;
+      font-size: 0.7rem; color: var(--muted);
+      padding: 0 0 0 0;
+    }
+
+    .dumbbell-row {
+      display: grid; grid-template-columns: 190px 1fr 96px;
+      gap: 14px; align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--faint);
+    }
+
+    .db-name {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.83rem;
+    }
+
+    .db-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex: none;
+    }
+
+    .db-track {
+      position: relative; height: 22px;
+    }
+
+    .db-line {
+      position: absolute; top: 50%;
+      height: 1.5px; transform: translateY(-50%);
+      background: rgba(0,0,0,0.12);
+    }
+
+    .db-circle {
+      position: absolute; top: 50%;
+      transform: translate(-50%,-50%);
+      border-radius: 50%;
+    }
+
+    .db-circle.hollow {
+      width: 10px; height: 10px;
+      border: 2px solid var(--color, #888);
+      background: transparent;
+    }
+
+    .db-circle.filled {
+      width: 13px; height: 13px;
+      background: var(--color, #888);
+    }
+
+    .db-vals {
+      font-size: 0.76rem; color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      text-align: right; white-space: nowrap;
+    }
+
+    .gap-callout {
+      margin-top: 20px; padding: 13px 17px;
+      border-left: 3px solid var(--accent);
+      background: rgba(139,92,246,0.05);
+      border-radius: 0 6px 6px 0;
+      font-size: 0.84rem; color: var(--muted); line-height: 1.7;
+    }
+
+    .gap-callout strong { color: var(--ink); }
+
+    /* =========================================================
+       BENCHMARK (leaderboard — kept from index2.html)
+    ========================================================= */
+    .benchmark-controls {
+      display: flex; flex-direction: column;
+      gap: 10px; margin: 24px 0 8px;
+    }
+
+    .control-group {
+      display: flex; gap: 8px;
+      flex-wrap: wrap; align-items: center;
+    }
+
+    .control-label {
+      font-size: 0.74rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--muted); margin-right: 4px;
     }
 
     .chip {
@@ -189,666 +643,976 @@
       transition: background 120ms, color 120ms;
     }
 
-    .chip:hover { background: rgba(0,0,0,0.04); color: var(--ink); }
-
-    .chip.is-active {
-      background: var(--ink); color: #f5efea;
-    }
+    .chip:hover { background: rgba(0,0,0,0.05); color: var(--ink); }
+    .chip.is-active { background: var(--ink); color: var(--bg); }
 
     .chart-meta {
-      display: flex; justify-content: space-between; align-items: center;
+      display: flex; justify-content: space-between;
+      align-items: flex-end; gap: 16px;
       padding: 12px 0 16px;
       font-size: 0.8rem; color: var(--muted);
       border-bottom: 1px solid var(--faint);
       margin-bottom: 16px;
     }
 
-    .legend { display: flex; gap: 16px; }
+    .metric-copy strong {
+      display: block; color: var(--ink);
+      font-size: 0.88rem; margin-bottom: 2px;
+    }
 
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; }
     .legend-item { display: inline-flex; align-items: center; gap: 6px; }
-
     .swatch { width: 8px; height: 8px; border-radius: 50%; }
 
     .benchmark-chart { display: grid; gap: 6px; }
 
     .benchmark-row {
       display: grid;
-      grid-template-columns: 200px 1fr 52px;
-      gap: 12px;
-      align-items: center;
-      padding: 6px 0;
-      opacity: 0;
-      transform: translateY(6px);
+      grid-template-columns: 215px 1fr 56px;
+      gap: 12px; align-items: center; padding: 6px 0;
+      opacity: 0; transform: translateY(6px);
       transition: opacity 350ms ease, transform 350ms ease;
     }
 
-    .benchmark-row.is-visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    .benchmark-row.is-visible { opacity: 1; transform: translateY(0); }
 
-    .model-label {
-      display: flex; align-items: center; gap: 10px;
-      min-width: 0;
-    }
+    .model-label { display: flex; align-items: center; gap: 10px; min-width: 0; }
 
     .provider-logo {
       width: 20px; height: 20px; flex: none;
       display: flex; align-items: center; justify-content: center;
-      color: var(--muted);
     }
 
-    .provider-logo svg { width: 18px; height: 18px; display: block; }
+    .provider-logo img { width: 18px; height: 18px; object-fit: contain; display: block; }
 
     .label-text { min-width: 0; }
-
     .label-text strong {
       display: block; font-size: 0.88rem; font-weight: 600;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-
-    .label-text span {
-      display: block; font-size: 0.75rem; color: var(--muted);
-    }
+    .label-text span { display: block; font-size: 0.75rem; color: var(--muted); }
 
     .bar-track {
-      height: 28px;
-      border-radius: 4px;
+      height: 28px; border-radius: 4px;
       background: rgba(0,0,0,0.04);
-      overflow: hidden;
-      position: relative;
+      overflow: hidden; position: relative;
     }
 
     .bar-fill {
       position: absolute; inset: 0 auto 0 0;
-      height: 100%;
-      border-radius: 4px;
+      height: 100%; border-radius: 4px;
       background: var(--bar-color, var(--accent));
       opacity: 0.75;
-      transition: width 400ms cubic-bezier(0.25, 0.8, 0.25, 1);
+      transition: width 420ms cubic-bezier(0.25,0.8,0.25,1);
     }
 
     .bar-value {
       font-size: 0.82rem; font-weight: 700;
       font-variant-numeric: tabular-nums;
-      text-align: right;
-      color: var(--ink);
+      text-align: right; color: var(--ink);
     }
 
     .benchmark-note {
-      margin-top: 16px;
-      padding-top: 16px;
+      margin-top: 16px; padding-top: 16px;
       border-top: 1px solid var(--faint);
       font-size: 0.82rem; color: var(--muted);
-      line-height: 1.6;
+      line-height: 1.65; max-width: 70ch;
     }
 
-    /* ---- Prose sections ---- */
-
-    .prose h3 {
-      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-      font-size: 1.2rem;
-      letter-spacing: -0.02em;
-      margin: 32px 0 8px;
-      line-height: 1.3;
+    /* =========================================================
+       DATASET & CITATION
+    ========================================================= */
+    .dataset-cards {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; margin: 28px 0 36px;
     }
 
-    .prose h3:first-child { margin-top: 0; }
+    .dataset-card {
+      border: 1px solid var(--faint2); border-radius: 8px;
+      padding: 22px 24px; background: rgba(255,255,255,0.5);
+      text-decoration: none; color: var(--ink);
+      display: block;
+      transition: border-color 150ms, box-shadow 150ms;
+    }
 
-    .prose p {
+    .dataset-card:hover {
+      border-color: rgba(0,0,0,0.2);
+      box-shadow: 0 2px 14px rgba(0,0,0,0.07);
+      opacity: 1;
+    }
+
+    .dataset-card-icon { font-size: 1.4rem; margin-bottom: 10px; }
+
+    .dataset-card-title { font-weight: 700; font-size: 0.93rem; margin-bottom: 4px; }
+
+    .dataset-card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.52; }
+
+    .citation-wrap { position: relative; }
+
+    .citation-block {
+      background: rgba(0,0,0,0.03);
+      border: 1px solid var(--faint);
+      border-radius: 7px; padding: 18px 20px;
+      font-family: "SFMono-Regular", Menlo, monospace;
+      font-size: 0.78rem; line-height: 1.75;
       color: var(--muted);
-      line-height: 1.75;
-      margin-bottom: 12px;
-    }
-
-    .prose p:last-child { margin-bottom: 0; }
-
-    /* ---- Difficulty table ---- */
-
-    .diff-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 24px;
-      font-size: 0.88rem;
-    }
-
-    .diff-table th, .diff-table td {
-      text-align: left;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--faint);
-    }
-
-    .diff-table th {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .diff-table td:first-child { font-weight: 600; }
-
-    /* ---- Steps ---- */
-
-    .steps {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      margin-top: 24px;
-    }
-
-    .step-num {
-      font-size: 0.75rem; font-weight: 700;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .step h3 {
-      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-      font-size: 1.05rem;
-      line-height: 1.3;
-      letter-spacing: -0.01em;
-      margin-bottom: 8px;
-    }
-
-    .step p {
-      color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.65;
-    }
-
-    /* ---- Example ---- */
-
-    pre {
-      margin: 20px 0 0;
-      padding: 20px;
+      white-space: pre;
       overflow-x: auto;
-      border-radius: 8px;
-      background: #1a1612;
-      color: #e8ddd0;
-      font-family: "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
-      font-size: 0.84rem;
-      line-height: 1.6;
     }
 
-    /* ---- Takeaways ---- */
-
-    .takeaways { list-style: none; padding: 0; }
-
-    .takeaways li {
-      padding: 20px 0;
-      border-bottom: 1px solid var(--faint);
-    }
-
-    .takeaways li:first-child { padding-top: 0; }
-
-    .takeaways li h3 {
-      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-      font-size: 1.1rem;
-      letter-spacing: -0.015em;
-      margin-bottom: 6px;
-      line-height: 1.3;
-    }
-
-    .takeaways li p {
+    .copy-btn {
+      position: absolute; top: 12px; right: 12px;
+      appearance: none;
+      border: 1px solid var(--faint2);
+      background: var(--bg); cursor: pointer;
+      font: inherit; font-size: 0.76rem;
+      padding: 4px 10px; border-radius: 4px;
       color: var(--muted);
-      font-size: 0.92rem;
-      line-height: 1.7;
+      transition: color 120ms;
     }
 
-    /* ---- Footer ---- */
+    .copy-btn:hover { color: var(--ink); }
 
-    footer {
-      margin-top: 80px;
-      padding: 24px 0;
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+    .footer-wrap {
+      padding: 28px 0;
       border-top: 1px solid var(--faint);
       display: flex; justify-content: space-between;
       gap: 16px; flex-wrap: wrap;
-      font-size: 0.82rem;
-      color: var(--muted);
+      font-size: 0.8rem; color: var(--muted);
     }
 
-    footer .links { display: flex; gap: 20px; }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { color: var(--ink); font-weight: 600; font-size: 0.8rem; text-decoration: none; }
+    .footer-links a:hover { opacity: 0.7; }
 
-    footer .links a { color: var(--ink); font-weight: 600; font-size: 0.82rem; }
-
-    /* ---- Responsive ---- */
-
-    @media (max-width: 700px) {
-      .hero { padding: 48px 24px 40px; }
-
-      .stats-row { grid-template-columns: repeat(2, 1fr); gap: 20px; padding: 20px 0; }
-
+    /* =========================================================
+       RESPONSIVE
+    ========================================================= */
+    @media (max-width: 680px) {
+      .hero { padding: 52px 24px 44px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); gap: 20px; padding: 18px 0; }
+      .two-paths { grid-template-columns: 1fr; }
+      .error-grid { grid-template-columns: 1fr; }
+      .dataset-cards { grid-template-columns: 1fr; }
+      .dumbbell-row { grid-template-columns: 130px 1fr 80px; font-size: 0.78rem; }
+      .gap-axis-row  { grid-template-columns: 130px 1fr; }
+      .db-name { font-size: 0.78rem; }
       .benchmark-row { grid-template-columns: 1fr; gap: 4px; }
       .benchmark-row .bar-track { height: 24px; }
       .benchmark-row .bar-value { text-align: left; }
-
-      .steps { grid-template-columns: 1fr 1fr; }
-
       .topbar nav { gap: 14px; }
-      .topbar nav a { font-size: 0.8rem; }
-    }
-
-    @media (max-width: 480px) {
-      .steps { grid-template-columns: 1fr; }
+      .topbar nav a { font-size: 0.76rem; }
+      .chart-meta { flex-direction: column; align-items: flex-start; }
+      h2 { font-size: 1.65rem; }
+      .demo-card { padding: 20px; }
     }
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <a class="topbar-brand" href="#top">Emoji-Bench</a>
-    <nav>
-      <a href="#benchmark">Benchmark</a>
-      <a href="#design">Design</a>
-      <a href="#protocol">Protocol</a>
-      <a href="#takeaways">Takeaways</a>
-    </nav>
+
+<!-- ================================================================
+     TOPBAR
+================================================================ -->
+<div class="topbar">
+  <a class="topbar-brand" href="#top">Emoji-Bench</a>
+  <nav>
+    <a href="#idea">Idea</a>
+    <a href="#example">Example</a>
+    <a href="#finding">Finding</a>
+    <a href="#benchmark">Benchmark</a>
+    <a href="#dataset">Dataset</a>
+  </nav>
+</div>
+
+<!-- ================================================================
+     HERO
+================================================================ -->
+<header class="hero" id="top">
+  <div class="hero-title-wrap">
+    <!-- Emoji floaters — rise from the title on load -->
+    <span class="floater" style="--left:3%;  --delay:0s;    --drift:-22px; --size:1.5rem">🐙</span>
+    <span class="floater" style="--left:13%; --delay:0.20s; --drift: 14px; --size:1.2rem">🪬</span>
+    <span class="floater" style="--left:23%; --delay:0.06s; --drift:-16px; --size:1.4rem">🌙</span>
+    <span class="floater" style="--left:33%; --delay:0.30s; --drift: 10px; --size:1.1rem">🦊</span>
+    <span class="floater" style="--left:43%; --delay:0.13s; --drift:-28px; --size:1.5rem">🔮</span>
+    <span class="floater" style="--left:52%; --delay:0.24s; --drift: 20px; --size:1.3rem">🫑</span>
+    <span class="floater" style="--left:10%; --delay:0.40s; --drift: 16px; --size:1.1rem">⭐</span>
+    <span class="floater" style="--left:38%; --delay:0.34s; --drift:-20px; --size:1.2rem">🌺</span>
+    <span class="floater" style="--left:48%; --delay:0.45s; --drift: 24px; --size:1.0rem">🍄</span>
+    <span class="floater" style="--left:20%; --delay:0.50s; --drift:-10px; --size:1.1rem">🔵</span>
+    <span class="floater" style="--left:57%; --delay:0.17s; --drift: 18px; --size:1.3rem">🦋</span>
+    <span class="floater" style="--left:6%;  --delay:0.55s; --drift: 12px; --size:1.0rem">🟠</span>
+    <h1>Emoji Bench</h1>
+  </div>
+  <p class="hover-hint" id="hover-hint">↑ hover the title</p>
+
+  <p class="lead">
+    Can a language model verify a reasoning chain step by step —
+    or does it just re-execute it and check the endpoint?
+  </p>
+
+  <div class="hero-links">
+    <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">
+      <i class="fa-brands fa-github"></i> GitHub
+    </a>
+    <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000" target="_blank" rel="noreferrer">
+      <svg width="16" height="16" viewBox="4 0 87 84" fill="currentColor" style="vertical-align:-2px" aria-hidden="true"><path d="M47.21 76.5a34.75 34.75 0 1 0 0-69.5 34.75 34.75 0 0 0 0 69.5Z" opacity=".15"/><path d="M81.96 41.75a34.75 34.75 0 1 0-69.5 0 34.75 34.75 0 0 0 69.5 0Zm-73.5 0a38.75 38.75 0 1 1 77.5 0 38.75 38.75 0 0 1-77.5 0Z"/><path d="M58.5 32.3c1.28.44 1.78 3.06 3.07 2.38a5 5 0 1 0-6.76-2.07c.61 1.15 2.55-.72 3.7-.32ZM34.95 32.3c-1.28.44-1.79 3.06-3.07 2.38a5 5 0 1 1 6.76-2.07c-.61 1.15-2.56-.72-3.7-.32Z"/><path d="M46.96 56.29c9.83 0 13-8.76 13-13.26 0-2.34-1.57-1.6-4.09-.36-2.33 1.15-5.46 2.74-8.9 2.74-7.19 0-13-6.88-13-2.38s3.16 13.26 13 13.26Z"/></svg>
+      Hugging Face
+    </a>
   </div>
 
-  <header class="hero" id="top">
-    <h1>🤗 Emoji Bench</h1>
-    <p class="lead">
-      Emoji-Bench measures whether language models genuinely verify reasoning steps
-      or just pattern-match on what errors usually look like. Every task lives inside a
-      procedurally generated emoji algebra that doesn't exist in training data.
-    </p>
-    <div class="hero-links">
-      <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer"><i class="fa-brands fa-github"></i> GitHub</a>
-      <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-mixed-2000" target="_blank" rel="noreferrer"><svg width="16" height="16" viewBox="4 0 87 84" fill="currentColor" style="vertical-align:-2px"><path d="M47.21 76.5a34.75 34.75 0 1 0 0-69.5 34.75 34.75 0 0 0 0 69.5Z" opacity=".15"/><path d="M81.96 41.75a34.75 34.75 0 1 0-69.5 0 34.75 34.75 0 0 0 69.5 0Zm-73.5 0a38.75 38.75 0 1 1 77.5 0 38.75 38.75 0 0 1-77.5 0Z"/><path d="M58.5 32.3c1.28.44 1.78 3.06 3.07 2.38a5 5 0 1 0-6.76-2.07c.61 1.15 2.55-.72 3.7-.32ZM34.95 32.3c-1.28.44-1.79 3.06-3.07 2.38a5 5 0 1 1 6.76-2.07c-.61 1.15-2.56-.72-3.7-.32Z"/><path d="M46.96 56.29c9.83 0 13-8.76 13-13.26 0-2.34-1.57-1.6-4.09-.36-2.33 1.15-5.46 2.74-8.9 2.74-7.19 0-13-6.88-13-2.38s3.16 13.26 13 13.26Z"/></svg> Hugging Face</a>
+  <div class="stats-row">
+    <div class="stat">
+      <span class="stat-value">1,000</span>
+      <span class="stat-label">test instances</span>
     </div>
-  </header>
-
-  <main>
-    <div class="container">
-      <div class="stats-row">
-        <div class="stat">
-          <span class="stat-value">1,998</span>
-          <span class="stat-label">benchmark instances</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value">8</span>
-          <span class="stat-label">models evaluated</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value">4</span>
-          <span class="stat-label">difficulty levels</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value">3</span>
-          <span class="stat-label">error types</span>
-        </div>
-      </div>
+    <div class="stat">
+      <span class="stat-value">8</span>
+      <span class="stat-label">models evaluated</span>
     </div>
+    <div class="stat">
+      <span class="stat-value">4</span>
+      <span class="stat-label">difficulty levels</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">E‑RECONV</span>
+      <span class="stat-label">error type</span>
+    </div>
+  </div>
+</header>
 
-    <!-- Benchmark -->
-    <div class="container wide benchmark-section" id="benchmark">
-      <div class="section-label">The Benchmark</div>
-      <h2>Initial results, sliced live.</h2>
-      <p class="section-desc">
-        Eight models across three providers, scored on the full 1,998-example run.
+<!-- ================================================================
+     SECTION: THE IDEA
+================================================================ -->
+<section class="section" id="idea">
+  <div class="container">
+    <div class="section-label">The Idea</div>
+    <h2>Most verification benchmarks can be gamed by re-execution.</h2>
+    <div class="prose">
+      <p>
+        The standard way to test whether a model can check a reasoning chain: give it a
+        derivation and ask whether it's correct. But a model can pass this without reading
+        the steps at all — just re-execute the chain from scratch, compare the result to
+        the claimed endpoint, and flag any mismatch. This looks like verification. It isn't.
       </p>
+      <p>
+        Emoji-Bench isolates the case where this shortcut breaks. A <strong>reconvergent
+        error</strong> is a derivation where one intermediate step violates the rules, but
+        the chain recovers and reaches the correct final answer anyway. The endpoint looks
+        fine. Only step-level attention catches the error.
+      </p>
+    </div>
 
-      <div class="benchmark-controls">
-        <div id="scopeButtons">
-          <button class="chip is-active" data-scope="overall" type="button">Overall</button>
-          <button class="chip" data-scope="difficulty" type="button">Difficulty</button>
-          <button class="chip" data-scope="errorType" type="button">Error Type</button>
+    <div class="two-paths">
+      <div class="path path--wrong">
+        <div class="path-label">Re-execution strategy</div>
+        <div class="path-steps">
+          <div class="path-step">Step 1: valid</div>
+          <div class="path-step err">Step 2: rule violated ←</div>
+          <div class="path-step">Step 3: locally valid</div>
+          <div class="path-step result">Final: 🐙 (correct endpoint)</div>
         </div>
-        <div class="divider"></div>
-        <div id="sliceButtons"></div>
+        <div class="path-verdict wrong">Re-run → same answer → "no error" ✗</div>
       </div>
-
-      <div class="chart-meta">
-        <div class="legend">
-          <span class="legend-item"><span class="swatch" style="background:var(--openai)"></span> OpenAI</span>
-          <span class="legend-item"><span class="swatch" style="background:var(--anthropic)"></span> Anthropic</span>
-          <span class="legend-item"><span class="swatch" style="background:var(--mistral)"></span> Mistral</span>
+      <div class="path path--right">
+        <div class="path-label">Step-level verification</div>
+        <div class="path-steps">
+          <div class="path-step">Step 1: valid ✓</div>
+          <div class="path-step flagged">Step 2: 🚨 rule violated</div>
+          <div class="path-step dim">Step 3</div>
+          <div class="path-step dim">Final: 🐙</div>
         </div>
-        <span id="metricDirection">Higher is better</span>
-      </div>
-
-      <div class="benchmark-chart" id="benchmarkChart" aria-live="polite"></div>
-
-      <div class="benchmark-note">
-        Accuracy uses the joint metric: correct error detection <em>and</em> correct identification
-        of the first wrong step. False positive rate measures how often clean chains are incorrectly flagged.
+        <div class="path-verdict right">"Error at step 2." ✓</div>
       </div>
     </div>
 
-    <!-- Design -->
-    <div class="container" id="design">
-      <section>
-        <div class="section-label">Design Choices</div>
-        <h2>What the benchmark isolates.</h2>
+    <div class="prose">
+      <p>
+        The formal systems use emoji as their symbols — not numbers, algebra, or any domain
+        a model has seen before. Every rule must be read from the tables provided in the
+        prompt. There is no pattern to recall, no shortcut to take.
+      </p>
+    </div>
+  </div>
+</section>
 
-        <div class="prose">
-          <h3>Novel formal systems, not familiar domains</h3>
-          <p>
-            Existing metacognition benchmarks sit inside arithmetic, algebra, or code — all
-            heavily represented in pretraining. Emoji-Bench invents a fresh symbolic world for
-            each instance. If the algebra never existed before the prompt, detecting an error
-            requires actual table lookup rather than learned error aesthetics.
-          </p>
+<!-- ================================================================
+     SECTION: INTERACTIVE EXAMPLE
+================================================================ -->
+<section class="section section--tinted" id="example">
+  <div class="container">
+    <div class="section-label">Try It Yourself</div>
+    <h2>Walk through a real benchmark instance.</h2>
+    <p class="section-desc">
+      This is an actual example from the test set. Read the rules, follow the steps, and
+      try to spot where the reasoning goes wrong — without checking the final answer.
+    </p>
 
-          <h3>Emoji symbols are deliberate</h3>
-          <p>
-            The symbol pool is curated for single-token behavior across major model families,
-            clear visual separation, and zero mathematical baggage. A flamingo or a magnet doesn't
-            smuggle arithmetic priors into the task.
-          </p>
+    <div class="demo-card">
+      <div class="demo-phase-label">Formal System — "Orix System"</div>
 
-          <h3>Difficulty scales by rule load, not chain length</h3>
-          <p>
-            Every chain stays short while the formal system gets denser. The task gets harder
-            because there is more to track, not because the prompt becomes a wall of steps.
-          </p>
-
-          <h3>Error injection probes different failure modes</h3>
-          <p>
-            <strong>E-RES</strong> tests whether a model catches a wrong output.
-            <strong>E-INV</strong> tests whether it checks that a cited rule exists.
-            <strong>E-CASC</strong> makes later steps locally valid after an early root mistake.
-            Together they distinguish surface fluency from real verification.
-          </p>
+      <div class="demo-system">
+        <div class="system-symbols">
+          Symbols: <span class="sym">🐙</span> <span class="sym">🪬</span> <span class="sym">🫑</span>
         </div>
-
-        <table class="diff-table">
+        <div class="system-op-label">Operation ⊕ — lookup table (row ⊕ col):</div>
+        <table class="op-table" aria-label="Operation table for ⊕">
           <thead>
-            <tr>
-              <th>Level</th>
-              <th>Symbols</th>
-              <th>Base ops</th>
-              <th>Derived ops</th>
-              <th>Transforms</th>
-            </tr>
+            <tr><th>⊕</th><th>🐙</th><th>🪬</th><th>🫑</th></tr>
           </thead>
           <tbody>
-            <tr><td>Easy</td><td>3</td><td>1</td><td>0</td><td>0</td></tr>
-            <tr><td>Medium</td><td>4</td><td>1</td><td>1</td><td>1</td></tr>
-            <tr><td>Hard</td><td>5</td><td>2</td><td>1</td><td>1</td></tr>
-            <tr><td>Expert</td><td>6</td><td>2</td><td>2</td><td>2</td></tr>
+            <tr><th>🐙</th><td>🐙</td><td>🐙</td><td>🪬</td></tr>
+            <tr><th>🪬</th><td>🐙</td><td>🪬</td><td>🫑</td></tr>
+            <tr id="table-row-fish"><th>🫑</th><td>🐙</td><td>🪬</td><td>🪬</td></tr>
           </tbody>
         </table>
-      </section>
+        <div class="system-start">Evaluate: <code>((🫑 ⊕ 🐙) ⊕ (🫑 ⊕ 🪬))</code></div>
+      </div>
 
-      <!-- Construction -->
-      <section>
-        <div class="section-label">Dataset</div>
-        <h2>Four deterministic stages.</h2>
-        <p class="section-desc">
-          Each benchmark instance is built from a seeded pipeline. The dataset is fully reproducible.
+      <div class="demo-steps" id="demo-steps" aria-live="polite"></div>
+
+      <div class="demo-action" id="demo-action">
+        <button class="demo-btn" id="btn-primary">See the derivation →</button>
+      </div>
+
+      <div class="demo-question hidden" id="demo-question">
+        <div class="demo-phase-label" style="margin-top:20px; padding-top:20px; border-top:1px solid var(--faint)">Your assessment</div>
+        <p class="question-text">
+          The derivation reached <strong>🐙</strong> — which is the correct answer.
+          But is every step valid? Which step, if any, first contains a rule violation?
         </p>
-
-        <div class="steps">
-          <div class="step">
-            <div class="step-num">01</div>
-            <h3>System generation</h3>
-            <p>Sample 3–6 emoji symbols, generate operation tables, optionally add derived ops and distributing transformations.</p>
-          </div>
-          <div class="step">
-            <div class="step-num">02</div>
-            <h3>Chain construction</h3>
-            <p>Build a leftmost-innermost derivation so each reduction step is explicit and evaluation order is unambiguous.</p>
-          </div>
-          <div class="step">
-            <div class="step-num">03</div>
-            <h3>Error injection</h3>
-            <p>Emit a clean version plus up to three single-error variants. Cascading errors are recomputed downstream.</p>
-          </div>
-          <div class="step">
-            <div class="step-num">04</div>
-            <h3>Validation</h3>
-            <p>Check closure, table completeness, derived-op consistency, and transformation distribution.</p>
-          </div>
+        <div class="step-buttons" id="step-buttons">
+          <button class="step-btn" data-step="1">Step 1</button>
+          <button class="step-btn" data-step="2">Step 2</button>
+          <button class="step-btn" data-step="3">Step 3</button>
+          <button class="step-btn" data-step="0">No error</button>
         </div>
-      </section>
+        <button class="reveal-btn" id="btn-reveal">Reveal answer</button>
+      </div>
 
-      <!-- Example -->
-      <section>
-        <div class="section-label">Example</div>
-        <h2>What a failure case looks like.</h2>
-        <p class="section-desc">
-          A medium-difficulty <code>E-CASC</code> instance. Step 2 is wrong, and the rest of the
-          chain is recomputed from that wrong state.
-        </p>
-
-        <pre>Symbols: {🪸, 🪩, 🧄, 🍄}
-
-Derived op: x ⊗ y = (x ⊕ x) ⊕ y
-Transform: inv(🪸)=🪩, inv(🪩)=🪸, inv(🧄)=🍄, inv(🍄)=🧄
-
-Start: (inv(🧄) ⊗ inv(🍄))
-
-Step 1: (inv(🧄) ⊗ inv(🍄)) → (🍄 ⊗ inv(🍄))   [by inv]
-Step 2: (🍄 ⊗ inv(🍄)) → (🍄 ⊗ 🍄)             [by inv]  ← first error
-Step 3: (🍄 ⊗ 🍄) → ((🍄 ⊕ 🍄) ⊕ 🍄)           [by definition of ⊗]
-Step 4: ((🍄 ⊕ 🍄) ⊕ 🍄) → (🪩 ⊕ 🍄)           [by ⊕ table]
-Step 5: (🪩 ⊕ 🍄) → 🪸                           [by ⊕ table]</pre>
-
-        <div class="prose" style="margin-top: 20px;">
-          <p>
-            A shallow checker sees steps 3–5 as a coherent derivation. But step 2 applied the
-            transform incorrectly. <code>E-CASC</code> punishes local plausibility heuristics and
-            rewards verification from the start of the chain.
-          </p>
-        </div>
-      </section>
-
-      <!-- Protocol -->
-      <section id="protocol">
-        <div class="section-label">Protocol</div>
-        <h2>Prompting, outputs, and scoring.</h2>
-
-        <div class="prose">
-          <h3>Prompt structure</h3>
-          <p>
-            Each prompt contains the rules, the worked derivation, and a task asking whether there is
-            an error and what the first incorrect step is. The wording "your working out" frames
-            the task as metacognitive auditing.
-          </p>
-
-          <h3>Output format</h3>
-          <p>
-            All evaluations use structured output. OpenAI uses the Responses API parse path,
-            Anthropic uses Messages API JSON schema, and Mistral uses JSON object response formatting
-            at temperature zero.
-          </p>
-
-          <h3>Primary metric</h3>
-          <p>
-            Joint accuracy: the model must both decide correctly whether an error exists and
-            identify the first wrong step. The false positive slice is included because some
-            models look competitive only by hallucinating errors on clean rows.
-          </p>
-        </div>
-      </section>
-
-      <!-- Takeaways -->
-      <section id="takeaways">
-        <div class="section-label">Takeaways</div>
-        <h2>What the first run suggests.</h2>
-
-        <ul class="takeaways">
-          <li>
-            <h3>GPT-5.4 is the clear outlier</h3>
-            <p>
-              It leads every aggregate slice and posts a 0.0% false positive rate on clean chains.
-              That combination suggests systematic verification rather than broad suspicion.
-            </p>
-          </li>
-          <li>
-            <h3>Invented-rule errors are the real separator</h3>
-            <p>
-              E-INV exposes whether a model checks that a rule exists instead of merely validating
-              the resulting rewrite. Several otherwise strong models break sharply here.
-            </p>
-          </li>
-          <li>
-            <h3>False positives are a major failure mode</h3>
-            <p>
-              Some models recover many actual error rows but collapse overall by flagging clean
-              derivations at high rates. The benchmark makes that visible fast.
-            </p>
-          </li>
-          <li>
-            <h3>Difficulty hurts real verifiers more than weak ones</h3>
-            <p>
-              GPT-5.4 drops from easy to expert as rule load grows. Weaker models stay flat
-              because they're already near a floor — consistent with the pattern-matching hypothesis.
-            </p>
-          </li>
-        </ul>
-      </section>
-
-      <footer>
-        <span>Emoji-Bench — Metacognitive reasoning benchmark for LLMs.</span>
-        <div class="links">
-          <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">Repository</a>
-          <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-mixed-2000" target="_blank" rel="noreferrer">Dataset</a>
-        </div>
-      </footer>
+      <div class="demo-result" id="demo-result" aria-live="polite"></div>
     </div>
-  </main>
+  </div>
+</section>
 
-  <script>
-    const models = [
-      { id: "gpt-5.4", name: "GPT-5.4 (reasoning)", provider: "openai", company: "OpenAI", color: "#1f9d8b" },
-      { id: "gpt-5.4-mini", name: "GPT-5.4 mini (reasoning)", provider: "openai", company: "OpenAI", color: "#4db6a3" },
-      { id: "gpt-5.4-nano", name: "GPT-5.4 nano (reasoning)", provider: "openai", company: "OpenAI", color: "#8ed8c8" },
-      { id: "gpt-4.1-mini", name: "GPT-4.1 mini", provider: "openai", company: "OpenAI", color: "#caefe5" },
-      { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", provider: "anthropic", company: "Anthropic", color: "#96633f" },
-      { id: "claude-haiku-4-5", name: "Claude Haiku 4.5", provider: "anthropic", company: "Anthropic", color: "#c7956f" },
-      { id: "mistral-large-2512", name: "Mistral Large 3", provider: "mistral", company: "Mistral", color: "#d85732" },
-      { id: "mistral-medium-2508", name: "Mistral Medium 3.1", provider: "mistral", company: "Mistral", color: "#ef8d64" }
-    ];
+<!-- ================================================================
+     SECTION: ERROR TYPES
+================================================================ -->
+<section class="section" id="error-types">
+  <div class="container">
+    <div class="section-label">What We Test</div>
+    <h2>Four error types. One adversarial anti-shortcut.</h2>
+    <p class="section-desc">
+      The benchmark defines four kinds of errors. The first three are useful baselines.
+      The fourth — E-RECONV — is the one designed to defeat re-execution.
+    </p>
 
-    const providerColors = { openai: "#1f9d8b", anthropic: "#96633f", mistral: "#d85732" };
+    <div class="error-grid">
+      <div class="error-card">
+        <div class="error-code">E-RES</div>
+        <div class="error-name">Result Error</div>
+        <p class="error-desc">
+          A valid rule is cited correctly, but the output is computed wrong.
+          The step references a real rule; the result is just off.
+        </p>
+      </div>
+      <div class="error-card">
+        <div class="error-code">E-INV</div>
+        <div class="error-name">Invalid Rule</div>
+        <p class="error-desc">
+          The step cites a rule that does not exist in the formal system.
+          The citation looks plausible but has no entry in the operation tables.
+        </p>
+      </div>
+      <div class="error-card">
+        <div class="error-code">E-CASC</div>
+        <div class="error-name">Cascade Error</div>
+        <p class="error-desc">
+          An early step is wrong. Later steps are locally valid given that wrong
+          intermediate value, but the final answer is incorrect. The error propagates.
+        </p>
+      </div>
+      <div class="error-card error-card--highlight">
+        <div class="error-code">E-RECONV</div>
+        <div class="error-name">Reconvergent Error</div>
+        <p class="error-desc">
+          An early step violates the rules, but the chain still reaches the correct
+          final answer. The endpoint is indistinguishable from a valid derivation.
+          Only step-level checking will catch it.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 
-    const providerLogos = {
-      openai: `<img src="public/openai.svg" alt="OpenAI" width="18" height="18">`,
-      anthropic: `<img src="public/claude.svg" alt="Anthropic" width="18" height="18">`,
-      mistral: `<img src="public/mistral.png" alt="Mistral" width="18" height="18">`
-    };
+<!-- ================================================================
+     SECTION: THE FINDING
+================================================================ -->
+<section class="section section--tinted" id="finding">
+  <div class="container wide">
+    <div class="section-label">The Finding</div>
+    <h2>Detection and localization diverge sharply.</h2>
+    <p class="section-desc">
+      Two metrics matter. <strong>Detection rate</strong>: does the model say an error exists?
+      <strong>Step accuracy</strong>: does it identify the exact first wrong step?
+      For models using re-execution shortcuts, these diverge.
+      Models with extended thinking close the gap.
+    </p>
 
-    const data = {
-      overall: {
-        accuracy: {
-          label: "Overall Accuracy",
-          description: "Primary benchmark metric across the full 1,998-example run.",
-          direction: "higher",
-          values: { "gpt-5.4": 87.5, "gpt-5.4-nano": 74.3, "gpt-5.4-mini": 71.7, "gpt-4.1-mini": 49.5, "mistral-large-2512": 48.7, "mistral-medium-2508": 48.7, "claude-haiku-4-5": 48.4, "claude-sonnet-4-6": 48.4 }
-        },
-        falsePositive: {
-          label: "False Positive Rate",
-          description: "Share of clean derivations incorrectly flagged as errors.",
-          direction: "lower",
-          values: { "gpt-5.4": 0.0, "gpt-5.4-nano": 2.6, "gpt-5.4-mini": 2.6, "claude-sonnet-4-6": 15.0, "mistral-medium-2508": 25.6, "mistral-large-2512": 40.8, "gpt-4.1-mini": 55.2, "claude-haiku-4-5": 61.4 }
-        }
-      },
-      difficulty: {
-        easy: { label: "Easy", direction: "higher", values: { "gpt-5.4": 96.2, "gpt-5.4-nano": 74.5, "gpt-5.4-mini": 71.7, "gpt-4.1-mini": 51.5, "mistral-medium-2508": 51.1, "mistral-large-2512": 49.7, "claude-sonnet-4-6": 49.3, "claude-haiku-4-5": 44.9 } },
-        medium: { label: "Medium", direction: "higher", values: { "gpt-5.4": 85.2, "gpt-5.4-nano": 75.2, "gpt-5.4-mini": 72.1, "claude-haiku-4-5": 52.3, "mistral-large-2512": 51.3, "claude-sonnet-4-6": 50.9, "gpt-4.1-mini": 50.1, "mistral-medium-2508": 49.1 } },
-        hard: { label: "Hard", direction: "higher", values: { "gpt-5.4": 84.4, "gpt-5.4-nano": 74.0, "gpt-5.4-mini": 72.4, "gpt-4.1-mini": 50.2, "claude-haiku-4-5": 49.6, "mistral-large-2512": 47.0, "mistral-medium-2508": 47.0, "claude-sonnet-4-6": 44.2 } },
-        expert: { label: "Expert", direction: "higher", values: { "gpt-5.4": 84.2, "gpt-5.4-nano": 73.4, "gpt-5.4-mini": 70.6, "claude-sonnet-4-6": 49.4, "mistral-medium-2508": 47.4, "mistral-large-2512": 47.0, "claude-haiku-4-5": 46.8, "gpt-4.1-mini": 46.2 } }
-      },
-      errorType: {
-        clean: { label: "Clean Chains", direction: "higher", values: { "gpt-5.4": 100.0, "gpt-5.4-nano": 97.4, "gpt-5.4-mini": 97.4, "claude-sonnet-4-6": 85.0, "mistral-medium-2508": 74.4, "mistral-large-2512": 59.2, "gpt-4.1-mini": 44.8, "claude-haiku-4-5": 38.6 } },
-        eres: { label: "E-RES", direction: "higher", values: { "gpt-5.4": 100.0, "gpt-5.4-mini": 99.2, "gpt-5.4-nano": 97.0, "claude-haiku-4-5": 85.4, "gpt-4.1-mini": 77.6, "claude-sonnet-4-6": 74.8, "mistral-medium-2508": 58.0, "mistral-large-2512": 56.2 } },
-        einv: { label: "E-INV", direction: "higher", values: { "mistral-large-2512": 85.0, "claude-haiku-4-5": 78.8, "gpt-4.1-mini": 77.6, "mistral-medium-2508": 71.4, "gpt-5.4": 50.0, "claude-sonnet-4-6": 34.4, "gpt-5.4-nano": 7.4, "gpt-5.4-mini": 2.6 } },
-        ecasc: { label: "E-CASC", direction: "higher", values: { "gpt-5.4": 100.0, "gpt-5.4-nano": 99.8, "gpt-5.4-mini": 99.0, "claude-haiku-4-5": 79.9, "gpt-4.1-mini": 71.7, "mistral-large-2512": 56.6, "claude-sonnet-4-6": 50.4, "mistral-medium-2508": 47.8 } }
-      }
-    };
+    <div class="gap-legend">
+      <span class="gap-legend-item">
+        <span class="leg-dot-hollow"></span> Detection rate (hollow)
+      </span>
+      <span class="gap-legend-item">
+        <span class="leg-dot-filled"></span> Step accuracy (filled)
+      </span>
+      <span style="margin-left:6px; color:var(--muted)">— sorted by step accuracy</span>
+    </div>
 
-    const scopeOrder = {
-      overall: ["accuracy", "falsePositive"],
-      difficulty: ["easy", "medium", "hard", "expert"],
-      errorType: ["clean", "eres", "einv", "ecasc"]
-    };
+    <div class="gap-axis-row">
+      <div></div>
+      <div class="gap-axis-ticks">
+        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+      </div>
+    </div>
 
-    const scopeButtonContainer = document.getElementById("scopeButtons");
-    const sliceButtonContainer = document.getElementById("sliceButtons");
-    const benchmarkChart = document.getElementById("benchmarkChart");
-    const metricDirection = document.getElementById("metricDirection");
+    <div id="gap-chart" aria-label="Dumbbell chart: detection rate vs step accuracy per model"></div>
 
-    let currentScope = "overall";
-    let currentSlice = "accuracy";
+    <div class="gap-callout">
+      <strong>Reading this chart:</strong> The hollow circle is detection rate; the filled circle is step accuracy.
+      A wide connecting line signals a model that detects errors but cannot pinpoint where —
+      consistent with endpoint-comparison heuristics rather than genuine step verification.
+      GPT-5.4 thinking models show near-zero gap, suggesting actual step-by-step reasoning.
+    </div>
+  </div>
+</section>
 
-    function renderSliceButtons() {
-      sliceButtonContainer.innerHTML = "";
-      scopeOrder[currentScope].forEach((key) => {
-        const metric = data[currentScope][key];
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = `chip${key === currentSlice ? " is-active" : ""}`;
-        btn.textContent = metric.label;
-        btn.addEventListener("click", () => { currentSlice = key; renderSliceButtons(); renderChart(); });
-        sliceButtonContainer.appendChild(btn);
-      });
+<!-- ================================================================
+     SECTION: BENCHMARK LEADERBOARD
+================================================================ -->
+<section class="section" id="benchmark">
+  <div class="container wide">
+    <div class="section-label">Leaderboard</div>
+    <h2>Reconvergent results, sliced live.</h2>
+    <p class="section-desc">
+      Eight models on the full 1,000-example E-RECONV run.
+      Switch between detection rate and step accuracy, then filter by difficulty.
+    </p>
+
+    <div class="benchmark-controls">
+      <div class="control-group" id="metricButtons">
+        <span class="control-label">Metric</span>
+      </div>
+      <div class="control-group" id="difficultyButtons">
+        <span class="control-label">Difficulty</span>
+      </div>
+    </div>
+
+    <div class="chart-meta">
+      <div class="metric-copy">
+        <strong id="metricLabel">Detection Rate</strong>
+        <span id="metricDescription">Share of examples where the model correctly identifies that an error is present.</span>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:var(--openai)"></span>OpenAI</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--anthropic)"></span>Anthropic</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--mistral)"></span>Mistral</span>
+      </div>
+    </div>
+
+    <div class="benchmark-chart" id="benchmarkChart" aria-live="polite"></div>
+
+    <p class="benchmark-note">
+      Step accuracy is reported directly from the evaluation. On this dataset it equals joint accuracy —
+      every example contains an error, and the task requires both detecting it and naming the first bad step.
+    </p>
+  </div>
+</section>
+
+<!-- ================================================================
+     SECTION: DATASET
+================================================================ -->
+<section class="section section--tinted" id="dataset">
+  <div class="container">
+    <div class="section-label">Dataset</div>
+    <h2>Open data, open code.</h2>
+    <p class="section-desc">
+      The benchmark, generation pipeline, evaluation scripts, and full model predictions
+      are publicly available.
+    </p>
+
+    <div class="dataset-cards">
+      <a class="dataset-card" href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">
+        <div class="dataset-card-icon"><i class="fa-brands fa-github"></i></div>
+        <div class="dataset-card-title">GitHub Repository</div>
+        <div class="dataset-card-desc">Benchmark code, error injectors, evaluation scripts, and generation pipeline.</div>
+      </a>
+      <a class="dataset-card" href="https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000" target="_blank" rel="noreferrer">
+        <div class="dataset-card-icon">
+          <svg width="22" height="22" viewBox="4 0 87 84" fill="currentColor" aria-hidden="true"><path d="M47.21 76.5a34.75 34.75 0 1 0 0-69.5 34.75 34.75 0 0 0 0 69.5Z" opacity=".15"/><path d="M81.96 41.75a34.75 34.75 0 1 0-69.5 0 34.75 34.75 0 0 0 69.5 0Zm-73.5 0a38.75 38.75 0 1 1 77.5 0 38.75 38.75 0 0 1-77.5 0Z"/><path d="M58.5 32.3c1.28.44 1.78 3.06 3.07 2.38a5 5 0 1 0-6.76-2.07c.61 1.15 2.55-.72 3.7-.32ZM34.95 32.3c-1.28.44-1.79 3.06-3.07 2.38a5 5 0 1 1 6.76-2.07c-.61 1.15-2.56-.72-3.7-.32Z"/><path d="M46.96 56.29c9.83 0 13-8.76 13-13.26 0-2.34-1.57-1.6-4.09-.36-2.33 1.15-5.46 2.74-8.9 2.74-7.19 0-13-6.88-13-2.38s3.16 13.26 13 13.26Z"/></svg>
+        </div>
+        <div class="dataset-card-title">Hugging Face Dataset</div>
+        <div class="dataset-card-desc">1,000 reconvergent test instances with full model predictions and reports.</div>
+      </a>
+    </div>
+
+    <div class="section-label">Cite</div>
+    <div class="citation-wrap">
+      <div class="citation-block" id="bibtex-block">@misc{emoji-bench-2025,
+  title   = {Emoji-Bench: Step-Level Error Detection
+             in Reconvergent Formal Systems},
+  author  = {Dang, Huy},
+  year    = {2025},
+  url     = {https://github.com/huyxdang/Emoji-Bench}
+}</div>
+      <button class="copy-btn" id="copyBibBtn" aria-label="Copy BibTeX">Copy</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================
+     FOOTER
+================================================================ -->
+<div class="container">
+  <div class="footer-wrap">
+    <span>Emoji-Bench — reconvergent step-level evaluation.</span>
+    <div class="footer-links">
+      <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">Repository</a>
+      <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000" target="_blank" rel="noreferrer">Dataset</a>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     JAVASCRIPT
+================================================================ -->
+<script>
+'use strict';
+
+/* ------------------------------------------------------------------
+   INTERACTIVE EXAMPLE — state machine
+------------------------------------------------------------------ */
+const STEPS = [
+  {
+    label: 'Step 1',
+    expr:  '🫑 ⊕ 🐙 = 🐙',
+    note:  'row 🫑, col 🐙 → look up ⊕ table',
+    isError: false
+  },
+  {
+    label: 'Step 2',
+    expr:  '🫑 ⊕ 🪬 = 🐙',   // wrong — should be 🪬
+    note:  'row 🫑, col 🪬 → look up ⊕ table',
+    isError: true
+  },
+  {
+    label: 'Step 3',
+    expr:  '🐙 ⊕ 🐙 = 🐙',
+    note:  'row 🐙, col 🐙 → look up ⊕ table',
+    isError: false
+  }
+];
+
+const CORRECT_STEP = 2; // 1-indexed
+
+let demoPhase  = 'idle';   // idle → step-0 → step-1 → step-2 → question → done
+let stepEls    = [];
+let answered   = false;
+
+const demoSteps    = document.getElementById('demo-steps');
+const demoAction   = document.getElementById('demo-action');
+const demoQuestion = document.getElementById('demo-question');
+const demoResult   = document.getElementById('demo-result');
+const btnPrimary   = document.getElementById('btn-primary');
+
+function addStepItem(index) {
+  const s = STEPS[index];
+  const el = document.createElement('div');
+  el.className = 'step-item';
+  el.innerHTML =
+    '<div class="step-num">' + s.label + '</div>' +
+    '<div class="step-content">' +
+      '<div class="step-expr">' + s.expr + '</div>' +
+      '<div class="step-note">' + s.note + '</div>' +
+    '</div>' +
+    '<div class="step-badge unknown" id="badge-' + index + '">?</div>';
+  demoSteps.appendChild(el);
+  // Trigger transition
+  requestAnimationFrame(() => el.classList.add('visible'));
+  stepEls[index] = el;
+}
+
+function updateBadges() {
+  STEPS.forEach((s, i) => {
+    const badge = document.getElementById('badge-' + i);
+    if (!badge) return;
+    if (s.isError) {
+      badge.textContent = '✗';
+      badge.className = 'step-badge error';
+      stepEls[i].classList.add('is-error');
+    } else {
+      badge.textContent = '✓';
+      badge.className = 'step-badge ok';
     }
+  });
+}
 
-    function renderChart() {
-      const metric = data[currentScope][currentSlice];
-      const sorted = [...models].sort((a, b) =>
-        metric.direction === "lower"
-          ? metric.values[a.id] - metric.values[b.id]
-          : metric.values[b.id] - metric.values[a.id]
-      );
+function showReveal(chosenStep, isReveal) {
+  if (answered) return;
+  answered = true;
 
-      metricDirection.textContent = metric.direction === "lower" ? "Lower is better" : "Higher is better";
-      benchmarkChart.innerHTML = "";
+  // Disable step buttons
+  document.querySelectorAll('.step-btn').forEach(b => b.disabled = true);
 
-      sorted.forEach((model, i) => {
-        const val = metric.values[model.id];
-        const row = document.createElement("div");
-        row.className = "benchmark-row";
-        row.innerHTML = `
-          <div class="model-label">
-            <span class="provider-logo">${providerLogos[model.provider]}</span>
-            <div class="label-text">
-              <strong>${model.name}</strong>
-              <span>${model.company}</span>
-            </div>
-          </div>
-          <div class="bar-track">
-            <div class="bar-fill" data-width="${val}" style="--bar-color:${providerColors[model.provider]}; width:0%"></div>
-          </div>
-          <span class="bar-value">${val.toFixed(1)}%</span>
-        `;
-        row.style.transitionDelay = `${i * 60}ms`;
-        benchmarkChart.appendChild(row);
-      });
+  updateBadges();
 
-      animateBars();
-    }
+  let verdict;
+  if (isReveal) {
+    verdict = 'The error is at <strong>Step ' + CORRECT_STEP + '</strong>.';
+  } else if (chosenStep === CORRECT_STEP) {
+    verdict = 'Correct — the error is at <strong>Step ' + CORRECT_STEP + '</strong>.';
+  } else if (chosenStep === 0) {
+    verdict = 'There is an error — at <strong>Step ' + CORRECT_STEP + '</strong>.';
+  } else {
+    verdict = 'Not quite. Step ' + chosenStep + ' is valid here. The error is at <strong>Step ' + CORRECT_STEP + '</strong>.';
+  }
 
-    function animateBars() {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          const rows = benchmarkChart.querySelectorAll(".benchmark-row");
-          rows.forEach((row) => {
-            row.classList.add("is-visible");
-            const fill = row.querySelector(".bar-fill");
-            if (fill) fill.style.width = fill.dataset.width + "%";
-          });
-          observer.disconnect();
-        });
-      }, { threshold: 0.15 });
+  demoResult.innerHTML =
+    '<div class="reveal-content">' +
+      '<div class="reveal-verdict">' + verdict + '</div>' +
+      '<p>Step 2 claims <strong>🫑 ⊕ 🪬 = 🐙</strong>. ' +
+      'But the table shows: row 🫑, col 🪬 → <strong>🪬</strong>. ' +
+      'The correct result is 🪬, not 🐙.</p>' +
+      '<p>With the corrected value, step 3 would compute <strong>🐙 ⊕ 🪬 = 🐙</strong> ' +
+      '(row 🐙, col 🪬 → 🐙). The final answer is unchanged.</p>' +
+      '<div class="key-insight">' +
+        '<strong>This is a reconvergent error.</strong> The endpoint is correct either way — ' +
+        'a model that only re-executes and checks <strong>🐙 = 🐙</strong> ' +
+        'would mark this derivation as valid. It would be wrong.' +
+      '</div>' +
+    '</div>';
+  demoResult.classList.add('visible');
+}
 
-      observer.observe(benchmarkChart);
-    }
+function advancePrimary() {
+  const phases = ['idle', 'step-0', 'step-1', 'step-2', 'question'];
+  const currentIdx = phases.indexOf(demoPhase);
 
-    scopeButtonContainer.querySelectorAll("[data-scope]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        currentScope = btn.dataset.scope;
-        currentSlice = scopeOrder[currentScope][0];
-        scopeButtonContainer.querySelectorAll("[data-scope]").forEach((b) => b.classList.toggle("is-active", b === btn));
-        renderSliceButtons();
-        renderChart();
-      });
+  if (demoPhase === 'idle') {
+    demoPhase = 'step-0';
+    addStepItem(0);
+    btnPrimary.textContent = 'Show step 2 →';
+
+  } else if (demoPhase === 'step-0') {
+    demoPhase = 'step-1';
+    addStepItem(1);
+    btnPrimary.textContent = 'Show step 3 →';
+
+  } else if (demoPhase === 'step-1') {
+    demoPhase = 'step-2';
+    addStepItem(2);
+    btnPrimary.textContent = 'Assess this derivation →';
+
+  } else if (demoPhase === 'step-2') {
+    demoPhase = 'question';
+    demoQuestion.classList.remove('hidden');
+    demoAction.style.display = 'none';
+    demoQuestion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+btnPrimary.addEventListener('click', advancePrimary);
+
+document.getElementById('demo-question').addEventListener('click', e => {
+  if (e.target.matches('.step-btn')) {
+    showReveal(parseInt(e.target.dataset.step, 10), false);
+  }
+  if (e.target.id === 'btn-reveal') {
+    showReveal(-1, true);
+  }
+});
+
+
+/* ------------------------------------------------------------------
+   DUMBBELL / GAP CHART
+------------------------------------------------------------------ */
+const GAP_DATA = [
+  { name: 'GPT-5.4',              provider: 'openai',    detect: 97.1, step: 97.1 },
+  { name: 'GPT-5.4 nano',         provider: 'openai',    detect: 94.1, step: 93.1 },
+  { name: 'GPT-5.4 mini',         provider: 'openai',    detect: 94.8, step: 93.0 },
+  { name: 'Sonnet 4.6 (thinking)',provider: 'anthropic', detect: 91.9, step: 91.6 },
+  { name: 'Claude Sonnet',        provider: 'anthropic', detect: 53.1, step: 40.6 },
+  { name: 'Claude Haiku',         provider: 'anthropic', detect: 65.8, step: 40.5 },
+  { name: 'GPT-4.1 mini',         provider: 'openai',    detect: 85.8, step: 38.0 },
+  { name: 'Mistral Large',        provider: 'mistral',   detect: 77.7, step: 37.0 },
+  { name: 'Mistral Medium',       provider: 'mistral',   detect: 68.4, step: 30.9 }
+].sort((a, b) => b.step - a.step);
+
+const PROVIDER_COLOR = { openai: '#1f9d8b', anthropic: '#96633f', mistral: '#d85732' };
+
+function buildGapChart() {
+  const container = document.getElementById('gap-chart');
+  GAP_DATA.forEach(d => {
+    const color  = PROVIDER_COLOR[d.provider];
+    const lo     = Math.min(d.detect, d.step);
+    const hi     = Math.max(d.detect, d.step);
+
+    const row = document.createElement('div');
+    row.className = 'dumbbell-row';
+    row.innerHTML =
+      '<div class="db-name">' +
+        '<div class="db-dot" style="background:' + color + '"></div>' +
+        '<span>' + d.name + '</span>' +
+      '</div>' +
+      '<div class="db-track">' +
+        '<div class="db-line" style="left:' + lo + '%;right:' + (100 - hi) + '%"></div>' +
+        '<div class="db-circle hollow" style="left:' + d.detect + '%;--color:' + color + '"></div>' +
+        '<div class="db-circle filled" style="left:' + d.step + '%;--color:' + color + '"></div>' +
+      '</div>' +
+      '<div class="db-vals">' + d.detect.toFixed(1) + ' / ' + d.step.toFixed(1) + '</div>';
+    container.appendChild(row);
+  });
+}
+
+buildGapChart();
+
+
+/* ------------------------------------------------------------------
+   BENCHMARK LEADERBOARD
+------------------------------------------------------------------ */
+const MODELS = [
+  { id: 'gpt-5.4',                      name: 'GPT-5.4 (thinking)',          provider: 'openai',    company: 'OpenAI' },
+  { id: 'gpt-5.4-mini',                 name: 'GPT-5.4 mini (thinking)',     provider: 'openai',    company: 'OpenAI' },
+  { id: 'gpt-5.4-nano',                 name: 'GPT-5.4 nano (thinking)',     provider: 'openai',    company: 'OpenAI' },
+  { id: 'gpt-4.1-mini',                 name: 'GPT-4.1 mini',                provider: 'openai',    company: 'OpenAI' },
+  { id: 'claude-sonnet-4-6-reasoning',  name: 'Claude Sonnet 4.6 (thinking)',provider: 'anthropic', company: 'Anthropic' },
+  { id: 'claude-sonnet-4-6',            name: 'Claude Sonnet 4.6',           provider: 'anthropic', company: 'Anthropic' },
+  { id: 'claude-haiku-4-5',             name: 'Claude Haiku 4.5',            provider: 'anthropic', company: 'Anthropic' },
+  { id: 'mistral-large-2512',           name: 'Mistral Large 3',             provider: 'mistral',   company: 'Mistral' },
+  { id: 'mistral-medium-2508',          name: 'Mistral Medium 3.1',          provider: 'mistral',   company: 'Mistral' }
+];
+
+const METRIC_CONFIG = {
+  detection: {
+    label: 'Detection Rate',
+    description: 'Share of examples where the model correctly identifies that an error is present.'
+  },
+  step: {
+    label: 'Step Accuracy',
+    description: 'Share of examples where the model identifies the correct first wrong step.'
+  }
+};
+
+const DIFFICULTY_CONFIG = {
+  overall: { label: 'Overall' },
+  easy:    { label: 'Easy' },
+  medium:  { label: 'Medium' },
+  hard:    { label: 'Hard' },
+  expert:  { label: 'Expert' }
+};
+
+const DATA = {
+  overall: {
+    detection: { 'claude-haiku-4-5':65.8,'claude-sonnet-4-6':53.1,'claude-sonnet-4-6-reasoning':91.9,'gpt-4.1-mini':85.8,'gpt-5.4':97.1,'gpt-5.4-mini':94.8,'gpt-5.4-nano':94.1,'mistral-large-2512':77.7,'mistral-medium-2508':68.4 },
+    step:      { 'claude-haiku-4-5':40.5,'claude-sonnet-4-6':40.6,'claude-sonnet-4-6-reasoning':91.6,'gpt-4.1-mini':38.0,'gpt-5.4':97.1,'gpt-5.4-mini':93.0,'gpt-5.4-nano':93.1,'mistral-large-2512':37.0,'mistral-medium-2508':30.9 }
+  },
+  easy: {
+    detection: { 'claude-haiku-4-5':78.4,'claude-sonnet-4-6':64.8,'claude-sonnet-4-6-reasoning':96.8,'gpt-4.1-mini':85.2,'gpt-5.4':96.0,'gpt-5.4-mini':96.4,'gpt-5.4-nano':98.8,'mistral-large-2512':61.2,'mistral-medium-2508':61.2 },
+    step:      { 'claude-haiku-4-5':70.0,'claude-sonnet-4-6':60.0,'claude-sonnet-4-6-reasoning':96.4,'gpt-4.1-mini':70.8,'gpt-5.4':96.0,'gpt-5.4-mini':96.0,'gpt-5.4-nano':98.8,'mistral-large-2512':58.0,'mistral-medium-2508':57.6 }
+  },
+  medium: {
+    detection: { 'claude-haiku-4-5':69.2,'claude-sonnet-4-6':48.4,'claude-sonnet-4-6-reasoning':93.2,'gpt-4.1-mini':87.6,'gpt-5.4':98.0,'gpt-5.4-mini':94.0,'gpt-5.4-nano':94.0,'mistral-large-2512':68.8,'mistral-medium-2508':61.6 },
+    step:      { 'claude-haiku-4-5':41.6,'claude-sonnet-4-6':41.2,'claude-sonnet-4-6-reasoning':92.8,'gpt-4.1-mini':40.0,'gpt-5.4':98.0,'gpt-5.4-mini':93.6,'gpt-5.4-nano':93.6,'mistral-large-2512':36.8,'mistral-medium-2508':29.2 }
+  },
+  hard: {
+    detection: { 'claude-haiku-4-5':58.8,'claude-sonnet-4-6':48.4,'claude-sonnet-4-6-reasoning':89.2,'gpt-4.1-mini':87.2,'gpt-5.4':96.4,'gpt-5.4-mini':94.8,'gpt-5.4-nano':90.8,'mistral-large-2512':84.4,'mistral-medium-2508':74.0 },
+    step:      { 'claude-haiku-4-5':33.2,'claude-sonnet-4-6':38.0,'claude-sonnet-4-6-reasoning':88.8,'gpt-4.1-mini':24.4,'gpt-5.4':96.4,'gpt-5.4-mini':92.0,'gpt-5.4-nano':88.4,'mistral-large-2512':30.8,'mistral-medium-2508':21.2 }
+  },
+  expert: {
+    detection: { 'claude-haiku-4-5':56.8,'claude-sonnet-4-6':50.8,'claude-sonnet-4-6-reasoning':88.4,'gpt-4.1-mini':83.2,'gpt-5.4':98.0,'gpt-5.4-mini':94.0,'gpt-5.4-nano':92.8,'mistral-large-2512':96.4,'mistral-medium-2508':76.8 },
+    step:      { 'claude-haiku-4-5':17.2,'claude-sonnet-4-6':23.2,'claude-sonnet-4-6-reasoning':88.4,'gpt-4.1-mini':16.8,'gpt-5.4':98.0,'gpt-5.4-mini':90.4,'gpt-5.4-nano':91.6,'mistral-large-2512':22.4,'mistral-medium-2508':15.6 }
+  }
+};
+
+const LOGOS = {
+  openai:    '<img src="public/openai.svg" alt="OpenAI" width="18" height="18">',
+  anthropic: '<img src="public/claude.svg" alt="Anthropic" width="18" height="18">',
+  mistral:   '<img src="public/mistral.png" alt="Mistral" width="18" height="18">'
+};
+
+let currentMetric     = 'detection';
+let currentDifficulty = 'overall';
+
+const elMetricBtns     = document.getElementById('metricButtons');
+const elDifficultyBtns = document.getElementById('difficultyButtons');
+const elMetricLabel    = document.getElementById('metricLabel');
+const elMetricDesc     = document.getElementById('metricDescription');
+const elChart          = document.getElementById('benchmarkChart');
+
+function renderChipGroup(container, selected, config, onSelect) {
+  Array.from(container.querySelectorAll('button')).forEach(b => b.remove());
+  Object.entries(config).forEach(([key, item]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (key === selected ? ' is-active' : '');
+    btn.textContent = item.label;
+    btn.addEventListener('click', () => onSelect(key));
+    container.appendChild(btn);
+  });
+}
+
+function renderBenchmarkChart() {
+  const metric = METRIC_CONFIG[currentMetric];
+  const values = DATA[currentDifficulty][currentMetric];
+  const sorted = [...MODELS].sort((a, b) => values[b.id] - values[a.id]);
+
+  elMetricLabel.textContent = metric.label;
+  elMetricDesc.textContent  = metric.description;
+  elChart.innerHTML = '';
+
+  sorted.forEach((model, i) => {
+    const value = values[model.id];
+    const color = PROVIDER_COLOR[model.provider];
+    const row   = document.createElement('div');
+    row.className = 'benchmark-row';
+    row.style.transitionDelay = (i * 55) + 'ms';
+    row.innerHTML =
+      '<div class="model-label">' +
+        '<span class="provider-logo">' + LOGOS[model.provider] + '</span>' +
+        '<div class="label-text">' +
+          '<strong>' + model.name + '</strong>' +
+          '<span>' + model.company + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="bar-track">' +
+        '<div class="bar-fill" data-width="' + value + '" style="--bar-color:' + color + ';width:0%"></div>' +
+      '</div>' +
+      '<span class="bar-value">' + value.toFixed(1) + '%</span>';
+    elChart.appendChild(row);
+  });
+
+  // Animate
+  requestAnimationFrame(() => {
+    elChart.querySelectorAll('.benchmark-row').forEach(row => {
+      row.classList.add('is-visible');
+      const fill = row.querySelector('.bar-fill');
+      if (fill) fill.style.width = fill.dataset.width + '%';
     });
+  });
+}
 
-    renderSliceButtons();
-    renderChart();
-  </script>
+function refreshLeaderboard() {
+  renderChipGroup(elMetricBtns, currentMetric, METRIC_CONFIG, key => {
+    currentMetric = key; refreshLeaderboard();
+  });
+  renderChipGroup(elDifficultyBtns, currentDifficulty, DIFFICULTY_CONFIG, key => {
+    currentDifficulty = key; refreshLeaderboard();
+  });
+  renderBenchmarkChart();
+}
+
+refreshLeaderboard();
+
+
+/* ------------------------------------------------------------------
+   COPY BIBTEX
+------------------------------------------------------------------ */
+document.getElementById('copyBibBtn').addEventListener('click', function () {
+  const text = document.getElementById('bibtex-block').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    this.textContent = 'Copied!';
+    setTimeout(() => { this.textContent = 'Copy'; }, 1800);
+  }).catch(() => {
+    this.textContent = 'Copy failed';
+    setTimeout(() => { this.textContent = 'Copy'; }, 1800);
+  });
+});
+
+
+/* ------------------------------------------------------------------
+   HOVER EMOJI BURST on title  (+ teaser loop + hint cleanup)
+------------------------------------------------------------------ */
+(function () {
+  const wrap = document.querySelector('.hero-title-wrap');
+  if (!wrap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const h1   = wrap.querySelector('h1');
+  const hint = document.getElementById('hover-hint');
+  const POOL = ['🐙','🪬','🫑','🦊','🔮','🌙','⭐','🌺','🍄','🦋','🔵','🟠','🔶','🌊','✨','🌸','🎯','🫧'];
+
+  let lastSpawn  = 0;
+  let hovered    = false;
+  const INTERVAL = 130;
+
+  function spawn(x, y, keyframe) {
+    const teaser = keyframe === 'teaser-rise';
+    const emoji  = POOL[Math.floor(Math.random() * POOL.length)];
+    const size   = teaser
+      ? (0.85 + Math.random() * 0.35).toFixed(2)
+      : (1.0  + Math.random() * 0.70).toFixed(2);
+    const drift  = ((Math.random() - 0.5) * 60).toFixed(1);
+    const dur    = teaser
+      ? (1.9 + Math.random() * 0.8).toFixed(2)
+      : (1.3 + Math.random() * 0.9).toFixed(2);
+
+    const el = document.createElement('span');
+    el.textContent = emoji;
+    el.setAttribute('aria-hidden', 'true');
+    el.style.cssText =
+      'position:absolute;left:' + x + 'px;top:' + y + 'px;' +
+      'font-size:' + size + 'rem;line-height:1;' +
+      'pointer-events:none;user-select:none;z-index:2;opacity:0;' +
+      '--h-drift:' + drift + 'px;' +
+      'animation:' + keyframe + ' ' + dur + 's ease-out both;';
+
+    wrap.appendChild(el);
+    el.addEventListener('animationend', () => el.remove(), { once: true });
+  }
+
+  /* Teaser: ghost emoji rise from the title area without any hover */
+  function teaser() {
+    if (hovered) return;
+    const h1r   = h1.getBoundingClientRect();
+    const wrapr = wrap.getBoundingClientRect();
+    const midY  = h1r.top - wrapr.top + h1r.height * 0.55;
+    const count = Math.random() < 0.4 ? 2 : 1;
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        if (hovered) return;
+        const x = Math.random() * h1r.width;
+        spawn(x, midY, 'teaser-rise');
+      }, i * 280);
+    }
+  }
+
+  // Fire first teaser once the load animation finishes, then loop
+  const t0 = setTimeout(teaser, 2500);
+  const tLoop = setInterval(() => { if (hovered) { clearInterval(tLoop); } else { teaser(); } }, 3600);
+
+  /* On first mousemove: dismiss hint + stop teaser, then begin burst */
+  wrap.addEventListener('mousemove', e => {
+    if (!hovered) {
+      hovered = true;
+      clearTimeout(t0);
+      clearInterval(tLoop);
+      if (hint) {
+        hint.style.opacity = '0';
+        setTimeout(() => hint.remove(), 350);
+      }
+    }
+
+    const now = Date.now();
+    if (now - lastSpawn < INTERVAL) return;
+    lastSpawn = now;
+
+    const rect = wrap.getBoundingClientRect();
+    spawn(e.clientX - rect.left, e.clientY - rect.top, 'hover-rise');
+  });
+}());
+
+</script>
 </body>
 </html>
