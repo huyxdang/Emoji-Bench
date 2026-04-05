@@ -168,3 +168,5 @@ By default this writes report artifacts to `artifacts/eval-report`.
 - `scripts/generate_reconvergent_dataset.py`: exact-count `E-RECONV` dataset generation
 - `scripts/evaluate_model.py`: shared model evaluator
 - `scripts/run.sh`: multi-model evaluation wrapper
+
+LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=4 ./scripts/run_reconv.sh claude-sonnet-4-6-reasoning
