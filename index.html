@@ -93,7 +93,7 @@
        HERO
     ========================================================= */
     .hero {
-      padding: 96px 24px 64px;
+      padding: 96px 24px 32px;
       max-width: var(--content);
       margin: 0 auto;
     }
@@ -182,14 +182,14 @@
     .hero-links a {
       display: inline-flex; align-items: center; gap: 7px;
       font-size: 0.88rem; font-weight: 600;
-      color: var(--ink);
-      border-bottom: 1.5px solid rgba(0,0,0,0.18);
+      color: var(--accent);
+      border-bottom: 1.5px solid rgba(139,92,246,0.25);
       padding-bottom: 1px;
       transition: border-color 150ms;
       text-decoration: none;
     }
 
-    .hero-links a:hover { border-color: var(--ink); opacity: 1; }
+    .hero-links a:hover { border-color: var(--accent); opacity: 0.8; }
 
     /* =========================================================
        STATS ROW
@@ -218,7 +218,7 @@
     /* =========================================================
        SECTIONS
     ========================================================= */
-    .section         { padding: 80px 0; }
+    .section         { padding: 56px 0; }
     .section--tinted { background: var(--surface); }
 
     .section-label {
@@ -484,43 +484,7 @@
 
     .key-insight strong { color: var(--ink); }
 
-    /* =========================================================
-       ERROR TYPES
-    ========================================================= */
-    .error-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 14px; margin-top: 32px;
-    }
-
-    .error-card {
-      border: 1px solid var(--faint2);
-      border-radius: 8px; padding: 20px 22px;
-      background: rgba(255,255,255,0.4);
-    }
-
-    .error-card--highlight {
-      border-color: var(--gold-bdr);
-      background: var(--gold-bg);
-    }
-
-    .error-code {
-      font-family: "SFMono-Regular", Menlo, monospace;
-      font-size: 0.75rem; font-weight: 700;
-      letter-spacing: 0.06em;
-      color: var(--muted); margin-bottom: 5px;
-    }
-
-    .error-card--highlight .error-code { color: var(--gold); }
-
-    .error-name {
-      font-family: "Iowan Old Style","Palatino Linotype",Georgia,serif;
-      font-size: 1.05rem; font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .error-desc {
-      font-size: 0.84rem; color: var(--muted); line-height: 1.62;
-    }
+    /* Error Types section removed */
 
     /* =========================================================
        GAP / DUMBBELL CHART
@@ -686,11 +650,28 @@
     .provider-logo img { width: 18px; height: 18px; object-fit: contain; display: block; }
 
     .label-text { min-width: 0; }
-    .label-text strong {
-      display: block; font-size: 0.88rem; font-weight: 600;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+
+    .label-name-row {
+      display: flex; align-items: center; gap: 6px;
+      overflow: hidden; margin-bottom: 1px;
     }
-    .label-text span { display: block; font-size: 0.75rem; color: var(--muted); }
+
+    .label-name-row strong {
+      font-size: 0.88rem; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex-shrink: 1;
+    }
+
+    .thinking-tag {
+      flex: none;
+      font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 1px 5px 2px; border-radius: 3px;
+      background: rgba(0,0,0,0.07); color: var(--muted);
+      line-height: 1.6; white-space: nowrap;
+    }
+
+    .label-text > span { display: block; font-size: 0.75rem; color: var(--muted); }
 
     .bar-track {
       height: 28px; border-radius: 4px;
@@ -847,8 +828,6 @@
     <span class="floater" style="--left:6%;  --delay:0.55s; --drift: 12px; --size:1.0rem">🟠</span>
     <h1>Emoji Bench</h1>
   </div>
-  <p class="hover-hint" id="hover-hint">↑ hover the title</p>
-
   <p class="lead">
     Can a language model verify a reasoning chain step by step —
     or does it just re-execute it and check the endpoint?
@@ -864,24 +843,6 @@
     </a>
   </div>
 
-  <div class="stats-row">
-    <div class="stat">
-      <span class="stat-value">1,000</span>
-      <span class="stat-label">test instances</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value">8</span>
-      <span class="stat-label">models evaluated</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value">4</span>
-      <span class="stat-label">difficulty levels</span>
-    </div>
-    <div class="stat">
-      <span class="stat-value">E‑RECONV</span>
-      <span class="stat-label">error type</span>
-    </div>
-  </div>
 </header>
 
 <!-- ================================================================
@@ -899,10 +860,10 @@
         the claimed endpoint, and flag any mismatch. This looks like verification. It isn't.
       </p>
       <p>
-        Emoji-Bench isolates the case where this shortcut breaks. A <strong>reconvergent
-        error</strong> is a derivation where one intermediate step violates the rules, but
-        the chain recovers and reaches the correct final answer anyway. The endpoint looks
-        fine. Only step-level attention catches the error.
+        Emoji-Bench isolates the specific case where this shortcut breaks: a derivation
+        where one intermediate step violates the rules, but the chain recovers and reaches
+        the correct final answer anyway. The endpoint looks fine. Only step-level attention
+        catches the error.
       </p>
     </div>
 
@@ -999,60 +960,10 @@
 </section>
 
 <!-- ================================================================
-     SECTION: ERROR TYPES
-================================================================ -->
-<section class="section" id="error-types">
-  <div class="container">
-    <div class="section-label">What We Test</div>
-    <h2>Four error types. One adversarial anti-shortcut.</h2>
-    <p class="section-desc">
-      The benchmark defines four kinds of errors. The first three are useful baselines.
-      The fourth — E-RECONV — is the one designed to defeat re-execution.
-    </p>
-
-    <div class="error-grid">
-      <div class="error-card">
-        <div class="error-code">E-RES</div>
-        <div class="error-name">Result Error</div>
-        <p class="error-desc">
-          A valid rule is cited correctly, but the output is computed wrong.
-          The step references a real rule; the result is just off.
-        </p>
-      </div>
-      <div class="error-card">
-        <div class="error-code">E-INV</div>
-        <div class="error-name">Invalid Rule</div>
-        <p class="error-desc">
-          The step cites a rule that does not exist in the formal system.
-          The citation looks plausible but has no entry in the operation tables.
-        </p>
-      </div>
-      <div class="error-card">
-        <div class="error-code">E-CASC</div>
-        <div class="error-name">Cascade Error</div>
-        <p class="error-desc">
-          An early step is wrong. Later steps are locally valid given that wrong
-          intermediate value, but the final answer is incorrect. The error propagates.
-        </p>
-      </div>
-      <div class="error-card error-card--highlight">
-        <div class="error-code">E-RECONV</div>
-        <div class="error-name">Reconvergent Error</div>
-        <p class="error-desc">
-          An early step violates the rules, but the chain still reaches the correct
-          final answer. The endpoint is indistinguishable from a valid derivation.
-          Only step-level checking will catch it.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ================================================================
      SECTION: THE FINDING
 ================================================================ -->
 <section class="section section--tinted" id="finding">
-  <div class="container wide">
+  <div class="container">
     <div class="section-label">The Finding</div>
     <h2>Detection and localization diverge sharply.</h2>
     <p class="section-desc">
@@ -1094,12 +1005,11 @@
      SECTION: BENCHMARK LEADERBOARD
 ================================================================ -->
 <section class="section" id="benchmark">
-  <div class="container wide">
+  <div class="container">
     <div class="section-label">Leaderboard</div>
-    <h2>Reconvergent results, sliced live.</h2>
+    <h2>Reasoning models are winning.</h2>
     <p class="section-desc">
-      Eight models on the full 1,000-example E-RECONV run.
-      Switch between detection rate and step accuracy, then filter by difficulty.
+      Switch between detection rate and step accuracy.
     </p>
 
     <div class="benchmark-controls">
@@ -1161,11 +1071,11 @@
 
     <div class="section-label">Cite</div>
     <div class="citation-wrap">
-      <div class="citation-block" id="bibtex-block">@misc{emoji-bench-2025,
+      <div class="citation-block" id="bibtex-block">@misc{emoji-bench-2026,
   title   = {Emoji-Bench: Step-Level Error Detection
              in Reconvergent Formal Systems},
   author  = {Dang, Huy},
-  year    = {2025},
+  year    = {2026},
   url     = {https://github.com/huyxdang/Emoji-Bench}
 }</div>
       <button class="copy-btn" id="copyBibBtn" aria-label="Copy BibTeX">Copy</button>
@@ -1178,7 +1088,7 @@
 ================================================================ -->
 <div class="container">
   <div class="footer-wrap">
-    <span>Emoji-Bench — reconvergent step-level evaluation.</span>
+    <span>Emoji-Bench — step-level error detection.</span>
     <div class="footer-links">
       <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">Repository</a>
       <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000" target="_blank" rel="noreferrer">Dataset</a>
@@ -1384,15 +1294,15 @@ buildGapChart();
    BENCHMARK LEADERBOARD
 ------------------------------------------------------------------ */
 const MODELS = [
-  { id: 'gpt-5.4',                      name: 'GPT-5.4 (thinking)',          provider: 'openai',    company: 'OpenAI' },
-  { id: 'gpt-5.4-mini',                 name: 'GPT-5.4 mini (thinking)',     provider: 'openai',    company: 'OpenAI' },
-  { id: 'gpt-5.4-nano',                 name: 'GPT-5.4 nano (thinking)',     provider: 'openai',    company: 'OpenAI' },
-  { id: 'gpt-4.1-mini',                 name: 'GPT-4.1 mini',                provider: 'openai',    company: 'OpenAI' },
-  { id: 'claude-sonnet-4-6-reasoning',  name: 'Claude Sonnet 4.6 (thinking)',provider: 'anthropic', company: 'Anthropic' },
-  { id: 'claude-sonnet-4-6',            name: 'Claude Sonnet 4.6',           provider: 'anthropic', company: 'Anthropic' },
-  { id: 'claude-haiku-4-5',             name: 'Claude Haiku 4.5',            provider: 'anthropic', company: 'Anthropic' },
-  { id: 'mistral-large-2512',           name: 'Mistral Large 3',             provider: 'mistral',   company: 'Mistral' },
-  { id: 'mistral-medium-2508',          name: 'Mistral Medium 3.1',          provider: 'mistral',   company: 'Mistral' }
+  { id: 'gpt-5.4',                     name: 'GPT-5.4',           thinking: true,  provider: 'openai',    company: 'OpenAI' },
+  { id: 'gpt-5.4-mini',                name: 'GPT-5.4 mini',      thinking: true,  provider: 'openai',    company: 'OpenAI' },
+  { id: 'gpt-5.4-nano',                name: 'GPT-5.4 nano',      thinking: true,  provider: 'openai',    company: 'OpenAI' },
+  { id: 'gpt-4.1-mini',                name: 'GPT-4.1 mini',      thinking: false, provider: 'openai',    company: 'OpenAI' },
+  { id: 'claude-sonnet-4-6-reasoning', name: 'Sonnet 4.6',  thinking: true,  provider: 'anthropic', company: 'Anthropic' },
+  { id: 'claude-sonnet-4-6',           name: 'Sonnet 4.6',  thinking: false, provider: 'anthropic', company: 'Anthropic' },
+  { id: 'claude-haiku-4-5',            name: 'Haiku 4.5',   thinking: false, provider: 'anthropic', company: 'Anthropic' },
+  { id: 'mistral-large-2512',          name: 'Large 3',     thinking: false, provider: 'mistral',   company: 'Mistral' },
+  { id: 'mistral-medium-2508',         name: 'Medium 3.1',  thinking: false, provider: 'mistral',   company: 'Mistral' }
 ];
 
 const METRIC_CONFIG = {
@@ -1483,8 +1393,10 @@ function renderBenchmarkChart() {
       '<div class="model-label">' +
         '<span class="provider-logo">' + LOGOS[model.provider] + '</span>' +
         '<div class="label-text">' +
-          '<strong>' + model.name + '</strong>' +
-          '<span>' + model.company + '</span>' +
+          '<div class="label-name-row">' +
+            '<strong>' + model.name + '</strong>' +
+            (model.thinking ? '<span class="thinking-tag">thinking</span>' : '') +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div class="bar-track">' +
