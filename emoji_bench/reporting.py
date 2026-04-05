@@ -24,6 +24,7 @@ ERROR_TYPE_ORDER: dict[str, int] = {
     "E-RES": 1,
     "E-INV": 2,
     "E-CASC": 3,
+    "E-RECONV": 4,
 }
 
 
@@ -881,7 +882,7 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
         row_key="error_type",
         column_key="model",
         metric_key="joint_accuracy",
-        row_order=["clean", "E-RES", "E-INV", "E-CASC"],
+        row_order=["clean", "E-RES", "E-INV", "E-CASC", "E-RECONV"],
         column_order=report["models"],
     )
 
@@ -910,7 +911,7 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
                     column_key="error_type",
                     metric_key="detection_accuracy",
                     row_order=["easy", "medium", "hard", "expert"],
-                    column_order=["clean", "E-RES", "E-INV", "E-CASC"],
+                    column_order=["clean", "E-RES", "E-INV", "E-CASC", "E-RECONV"],
                 )
                 + _render_html_heatmap_table(
                     f"Step Accuracy: Difficulty x Error Type",
@@ -920,7 +921,7 @@ def render_html_report(report: dict[str, Any], *, input_paths: list[str]) -> str
                     column_key="error_type",
                     metric_key="joint_accuracy",
                     row_order=["easy", "medium", "hard", "expert"],
-                    column_order=["clean", "E-RES", "E-INV", "E-CASC"],
+                    column_order=["clean", "E-RES", "E-INV", "E-CASC", "E-RECONV"],
                 )
                 + "</section>"
             )

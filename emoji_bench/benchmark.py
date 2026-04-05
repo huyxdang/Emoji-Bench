@@ -8,6 +8,7 @@ from emoji_bench.error_injector import (
     inject_wrong_result,
 )
 from emoji_bench.prompt_formatter import format_benchmark_prompt
+from emoji_bench.reconvergent_error_injector import inject_reconvergent_wrong_result
 from emoji_bench.types import FormalSystem
 
 
@@ -53,6 +54,12 @@ def generate_benchmark_instance(
             )
         elif error_type is ErrorType.E_CASC:
             injected_chain, error_info = inject_cascading_wrong_result(
+                chain,
+                system,
+                seed=error_seed,
+            )
+        elif error_type is ErrorType.E_RECONV:
+            injected_chain, error_info = inject_reconvergent_wrong_result(
                 chain,
                 system,
                 seed=error_seed,

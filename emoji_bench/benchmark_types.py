@@ -17,6 +17,7 @@ class ErrorType(str, Enum):
     E_RES = "E-RES"
     E_INV = "E-INV"
     E_CASC = "E-CASC"
+    E_RECONV = "E-RECONV"
 
 
 @dataclass(frozen=True)

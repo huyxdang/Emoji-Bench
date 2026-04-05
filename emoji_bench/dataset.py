@@ -434,7 +434,7 @@ def build_dataset_card(manifest: DatasetManifest, *, repo_id: str | None = None)
         "- `split`: train / validation / test\n"
         "- `difficulty`: easy / medium / hard / expert\n"
         "- `condition`: clean or error_injected\n"
-        "- `error_type`: null, E-RES, E-INV, or E-CASC\n"
+        "- `error_type`: null or an injected error label such as E-RES, E-INV, E-CASC, or E-RECONV\n"
         "- `has_error`: whether the prompt contains an injected error\n"
         "- `prompt`: full benchmark prompt\n"
         "- `actual_step_count`: realized number of derivation steps\n"
