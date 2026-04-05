@@ -118,58 +118,6 @@
       z-index: 1;
     }
 
-    /* Emoji floaters */
-    .floater {
-      position: absolute;
-      top: 40%;
-      left: var(--left, 50%);
-      font-size: var(--size, 1.35rem);
-      line-height: 1;
-      pointer-events: none;
-      user-select: none;
-      z-index: 2;
-      opacity: 0;
-      animation: emoji-rise 2.2s ease-out var(--delay, 0s) both;
-    }
-
-    @keyframes emoji-rise {
-      0%   { opacity: 0;    transform: translateX(-50%) translateY(0px); }
-      18%  { opacity: 0.88; }
-      85%  { opacity: 0.15; }
-      100% { opacity: 0;    transform: translateX(calc(-50% + var(--drift, 0px))) translateY(-170px); }
-    }
-
-    @keyframes hover-rise {
-      0%   { opacity: 0;    transform: translateX(-50%) translateY(-50%); }
-      15%  { opacity: 0.9; }
-      100% { opacity: 0;    transform: translateX(calc(-50% + var(--h-drift, 0px))) translateY(calc(-50% - 150px)); }
-    }
-
-    /* Ghost teaser — lower opacity, slower, same path */
-    @keyframes teaser-rise {
-      0%   { opacity: 0;    transform: translateX(-50%) translateY(-50%); }
-      20%  { opacity: 0.38; }
-      100% { opacity: 0;    transform: translateX(calc(-50% + var(--h-drift, 0px))) translateY(calc(-50% - 120px)); }
-    }
-
-    /* "↑ hover" nudge label */
-    .hover-hint {
-      display: inline-block;
-      font-size: 0.68rem;
-      letter-spacing: 0.07em;
-      color: var(--muted);
-      opacity: 0;
-      margin-top: -8px;
-      margin-bottom: 30px;
-      pointer-events: none;
-      animation: hint-appear 0.5s ease-out 2.6s forwards;
-      transition: opacity 0.35s ease;
-    }
-
-    @keyframes hint-appear { to { opacity: 0.5; } }
-
-    @media (prefers-reduced-motion: reduce) { .floater { display: none; } }
-
     .hero-byline {
       font-size: 0.88rem;
       color: var(--muted);
@@ -812,19 +760,6 @@
 <header class="hero" id="top">
 <div class="hero-body">
   <div class="hero-title-wrap">
-    <!-- Emoji floaters — rise from the title on load -->
-    <span class="floater" style="--left:3%;  --delay:0s;    --drift:-22px; --size:1.5rem">🐙</span>
-    <span class="floater" style="--left:13%; --delay:0.20s; --drift: 14px; --size:1.2rem">🪬</span>
-    <span class="floater" style="--left:23%; --delay:0.06s; --drift:-16px; --size:1.4rem">🌙</span>
-    <span class="floater" style="--left:33%; --delay:0.30s; --drift: 10px; --size:1.1rem">🦊</span>
-    <span class="floater" style="--left:43%; --delay:0.13s; --drift:-28px; --size:1.5rem">🔮</span>
-    <span class="floater" style="--left:52%; --delay:0.24s; --drift: 20px; --size:1.3rem">🫑</span>
-    <span class="floater" style="--left:10%; --delay:0.40s; --drift: 16px; --size:1.1rem">⭐</span>
-    <span class="floater" style="--left:38%; --delay:0.34s; --drift:-20px; --size:1.2rem">🌺</span>
-    <span class="floater" style="--left:48%; --delay:0.45s; --drift: 24px; --size:1.0rem">🍄</span>
-    <span class="floater" style="--left:20%; --delay:0.50s; --drift:-10px; --size:1.1rem">🔵</span>
-    <span class="floater" style="--left:57%; --delay:0.17s; --drift: 18px; --size:1.3rem">🦋</span>
-    <span class="floater" style="--left:6%;  --delay:0.55s; --drift: 12px; --size:1.0rem">🟠</span>
     <h1>Emoji Bench <span id="hero-em">🌸</span></h1>
     <p class="lead">Can models <em>really</em> self-detect errors?</p>
   </div>
@@ -1433,87 +1368,6 @@ document.getElementById('copyBibBtn').addEventListener('click', function () {
   });
 });
 
-
-/* ------------------------------------------------------------------
-   HOVER EMOJI BURST on title  (+ teaser loop + hint cleanup)
------------------------------------------------------------------- */
-(function () {
-  const wrap = document.querySelector('.hero-title-wrap');
-  if (!wrap || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-  const h1   = wrap.querySelector('h1');
-  const hint = document.getElementById('hover-hint');
-  const POOL = ['🐙','🪬','🫑','🦊','🔮','🌙','⭐','🌺','🍄','🦋','🔵','🟠','🔶','🌊','✨','🌸','🎯','🫧'];
-
-  let lastSpawn  = 0;
-  let hovered    = false;
-  const INTERVAL = 130;
-
-  function spawn(x, y, keyframe) {
-    const teaser = keyframe === 'teaser-rise';
-    const emoji  = POOL[Math.floor(Math.random() * POOL.length)];
-    const size   = teaser
-      ? (0.85 + Math.random() * 0.35).toFixed(2)
-      : (1.0  + Math.random() * 0.70).toFixed(2);
-    const drift  = ((Math.random() - 0.5) * 60).toFixed(1);
-    const dur    = teaser
-      ? (1.9 + Math.random() * 0.8).toFixed(2)
-      : (1.3 + Math.random() * 0.9).toFixed(2);
-
-    const el = document.createElement('span');
-    el.textContent = emoji;
-    el.setAttribute('aria-hidden', 'true');
-    el.style.cssText =
-      'position:absolute;left:' + x + 'px;top:' + y + 'px;' +
-      'font-size:' + size + 'rem;line-height:1;' +
-      'pointer-events:none;user-select:none;z-index:2;opacity:0;' +
-      '--h-drift:' + drift + 'px;' +
-      'animation:' + keyframe + ' ' + dur + 's ease-out both;';
-
-    wrap.appendChild(el);
-    el.addEventListener('animationend', () => el.remove(), { once: true });
-  }
-
-  /* Teaser: ghost emoji rise from the title area without any hover */
-  function teaser() {
-    if (hovered) return;
-    const h1r   = h1.getBoundingClientRect();
-    const wrapr = wrap.getBoundingClientRect();
-    const midY  = h1r.top - wrapr.top + h1r.height * 0.55;
-    const count = Math.random() < 0.4 ? 2 : 1;
-    for (let i = 0; i < count; i++) {
-      setTimeout(() => {
-        if (hovered) return;
-        const x = Math.random() * h1r.width;
-        spawn(x, midY, 'teaser-rise');
-      }, i * 280);
-    }
-  }
-
-  // Fire first teaser once the load animation finishes, then loop
-  const t0 = setTimeout(teaser, 2500);
-  const tLoop = setInterval(() => { if (hovered) { clearInterval(tLoop); } else { teaser(); } }, 3600);
-
-  /* On first mousemove: dismiss hint + stop teaser, then begin burst */
-  wrap.addEventListener('mousemove', e => {
-    if (!hovered) {
-      hovered = true;
-      clearTimeout(t0);
-      clearInterval(tLoop);
-      if (hint) {
-        hint.style.opacity = '0';
-        setTimeout(() => hint.remove(), 350);
-      }
-    }
-
-    const now = Date.now();
-    if (now - lastSpawn < INTERVAL) return;
-    lastSpawn = now;
-
-    const rect = wrap.getBoundingClientRect();
-    spawn(e.clientX - rect.left, e.clientY - rect.top, 'hover-rise');
-  });
-}());
 
 </script>
 </body>
