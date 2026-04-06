@@ -104,7 +104,7 @@ The generator guarantees the requested count by continuing to search until it fi
 
 If you want a different dataset, change `--count` and optionally `--master-seed`.
 
-## Preview Examples
+## 👀 Preview Examples
 
 To inspect the dataset in a more readable format:
 
@@ -112,7 +112,7 @@ To inspect the dataset in a more readable format:
 python scripts/preview_dataset.py artifacts/emoji-bench-e-reconv-1000 --count 5
 ```
 
-## Evaluate Models
+## 🧪 Evaluate Models
 
 List configured models:
 
@@ -148,7 +148,7 @@ Useful notes:
 - reruns resume from existing `predictions.jsonl` unless you pass `--no-resume`
 - eval outputs are written under `artifacts/evals/...`
 
-## Reports
+## 📊 Reports
 
 Aggregate eval outputs into CSV and HTML reports:
 
@@ -168,7 +168,7 @@ By default that report is written to:
 artifacts/eval-report-e-reconv-1000
 ```
 
-## Repo Map
+## 🗺️ Repo Map
 
 - `emoji_bench/reconvergent_error_injector.py`: `E-RECONV` injection logic
 - `emoji_bench/reconvergent_dataset.py`: exact-count reconvergent dataset generation
@@ -181,7 +181,7 @@ artifacts/eval-report-e-reconv-1000
 - `scripts/preview_dataset.py`: readable dataset preview
 - `scripts/run_reconv.sh`: reconvergent evaluation wrapper
 
-## Why Only `E-RECONV`
+## 🎯 Why Only `E-RECONV`
 
 Earlier versions of the project included other error types as well (as you can tell from the extra files), and we did run experiments on them. But the project now centers only `E-RECONV`.
 
