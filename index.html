@@ -186,6 +186,19 @@
     .prose p:last-child { margin-bottom: 0; }
     .prose strong { color: var(--ink); }
 
+    .hl[data-pair] {
+      border-radius: 3px;
+      padding: 1px 3px;
+      margin: -1px -3px;
+      background-color: transparent;
+      transition: background-color 400ms ease;
+      cursor: default;
+    }
+    .hl[data-pair="1"].is-lit { background-color: #fef3c7; }
+    .hl[data-pair="2"].is-lit { background-color: #d1fae5; }
+    .hl[data-pair="3"].is-lit { background-color: #fee2e2; }
+
+
     .section--dark .section-label,
     .section--dark .section-desc,
     .section--dark .prose p,
@@ -236,6 +249,10 @@
       background: rgba(255,255,255,0.04);
       border-left-color: #a78bfa;
       color: #a8a8a8;
+    }
+
+    .section--dark .provider-logo img[src*="openai"] {
+      filter: brightness(0) invert(1);
     }
 
     /* =========================================================
@@ -772,7 +789,7 @@
 <div class="hero-body">
   <div class="hero-title-wrap">
     <h1>Emoji Bench <span id="hero-em">🐙</span></h1>
-    <p class="lead">Can models <em>really</em> self-detect errors?</p>
+    <p class="lead">April 2026 · Huy Dang</p>
   </div>
 
   <div class="hero-links">
@@ -802,7 +819,7 @@
 <section class="section" id="idea">
   <div class="container">
     <div class="section-label">The Idea</div>
-    <h2>Can a model accurately detect its own reasoning error?</h2>
+    <h2>Can a model detect its own error?</h2>
     <div class="prose">
       <p>
         Metacognition is a critical component of human intelligence. We reflect on our own thought
@@ -811,24 +828,31 @@
         <strong>But how do we rigorously test this?</strong>
       </p>
       <p>
-        Existing self-error detection benchmarks suffer from three primary limitations. First, they
+        Existing self-error detection benchmarks suffer from three primary limitations.
+        <span class="hl" data-pair="1">First, they
         rely on human annotators, which is expensive, difficult to scale, and susceptible to model
-        subjectivity bias. Second, they utilize heavily trained domains like mathematics, allowing
+        subjectivity bias.</span>
+        <span class="hl" data-pair="2">Second, they utilize heavily trained domains like mathematics, allowing
         models to predict common errors via pattern-matching rather than genuinely verifying
-        reasoning steps. Third, they typically feature cascading errors where a flawed intermediate
-        step leads to an incorrect final answer. Our preliminary experiments confirm this allows
+        reasoning steps.</span>
+        <span class="hl" data-pair="3">Third, they typically feature cascading errors where a flawed intermediate
+        step leads to an incorrect final answer.</span>
+        Our preliminary experiments confirm this allows
         models to "hack" the evaluation: rather than tracing an error to its source, a model can
         simply re-derive the answer from scratch, compare final outcomes, and declare an error
         without actually locating it.
       </p>
       <p>
-        To overcome these limitations, we introduce Emoji-Bench, a benchmark of 1,000 novel logic
-        questions designed to isolate and test true step-level verification. First, Emoji-Bench
+        To overcome these limitations, <strong>we introduce Emoji-Bench</strong>, a benchmark of 1,000 novel logic
+        questions designed to isolate and test true step-level verification.
+        <span class="hl" data-pair="1">First, Emoji-Bench
         utilizes procedural generation for deterministic evaluation, eliminating the need for human
-        annotators. Second, it employs novel formal systems represented by emojis, ensuring the
-        tasks are entirely absent from training corpora and thus immune to pattern-matching.
-        Finally, each question contains exactly one intermediate rule violation but is explicitly
-        engineered to still reach the correct final answer. This renders re-execution and
+        annotators.</span>
+        <span class="hl" data-pair="2">Second, it employs novel formal systems represented by emojis, ensuring the
+        tasks are entirely absent from training corpora and thus immune to pattern-matching.</span>
+        <span class="hl" data-pair="3">Finally, each question contains exactly one intermediate rule violation but is explicitly
+        engineered to still reach the correct final answer.</span>
+        This renders re-execution and
         final-answer comparison useless, ensuring that models can only succeed through rigorous,
         step-by-step verification.
       </p>
@@ -842,11 +866,7 @@
 <section class="section section--dark" id="example">
   <div class="container">
     <div class="section-label">Try It Yourself</div>
-    <h2>Walk through a real example.</h2>
-    <p class="section-desc">
-      Read the rules, follow the steps, and
-      try to spot where the reasoning goes wrong — without checking the final answer.
-    </p>
+    <h2>Does this proof contain an error? </h2>
 
     <div class="demo-card">
       <div class="demo-phase-label">Formal System</div>
@@ -986,6 +1006,27 @@
 ================================================================ -->
 <script>
 'use strict';
+
+/* ------------------------------------------------------------------
+   IDEA SECTION — paired highlight on hover
+------------------------------------------------------------------ */
+(function () {
+  var allHL = document.querySelectorAll('.hl[data-pair]');
+  allHL.forEach(function (el) {
+    el.addEventListener('mouseenter', function () {
+      var pair = el.dataset.pair;
+      allHL.forEach(function (s) {
+        if (s.dataset.pair === pair) s.classList.add('is-lit');
+      });
+    });
+    el.addEventListener('mouseleave', function () {
+      var pair = el.dataset.pair;
+      allHL.forEach(function (s) {
+        if (s.dataset.pair === pair) s.classList.remove('is-lit');
+      });
+    });
+  });
+}());
 
 /* ------------------------------------------------------------------
    HERO EMOJI SWAP — change the title emoji each time hero re-enters view
