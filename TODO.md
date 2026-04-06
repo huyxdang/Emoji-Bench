@@ -10,6 +10,9 @@ NICE TO HAVE:
 - [ ] Clean up repo for testing
 - [ ] Header UI.
 
+OKAY TO HAVE:
+- [ ] Fix footer -- it's positioned really fucking ugly right now. 
+
 
 W/ Citations: 
 Metacognition is a critical component of human intelligence. We reflect on our own thought processes, identify errors, and adapt our reasoning. 
