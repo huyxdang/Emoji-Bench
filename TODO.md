@@ -1,0 +1,5 @@
+- [X] Link between Problem & Solution for Idea
+- [ ] Clean up repo for testing
+- [ ] Improve Example 
+- [ ] Try it yourself 
+- [ ] Improve "The Finding" 
