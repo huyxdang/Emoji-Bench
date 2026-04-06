@@ -4,40 +4,88 @@
 
 # Emoji-Bench
 
-Emoji-Bench asks a simple question:
+Emoji-Bench is a benchmark for step-level error verification in novel formal systems. It asks a narrow question with a high bar:
 
-**When a model makes an error in a reasoning chain, is it able to detect that error accurately?**
+**When a model is shown a worked derivation containing an error, can it detect that an error exists and identify the exact first wrong step?**
 
-The goal is to test metacognitive error detection, not just problem solving. A model might be able to compute the right answer from scratch and still fail to notice that a shown derivation contains a bad step. Emoji-Bench is built to isolate that distinction.
+This repository is now focused on a single benchmark condition: **`E-RECONV`**.
 
-This repo is now focused on a single benchmark condition: **`E-RECONV`**.
+Links: [Hugging Face dataset](https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000)
 
-## ❓ What is `E-RECONV`?
+## TL;DR
 
-In `E-RECONV`, a reasoning derivation contains exactly one invalid step, but the chain still reaches the correct final answer.
+- `E-RECONV` inserts exactly one invalid intermediate step while preserving the correct final answer.
+- That blocks the cheap shortcut of re-solving the problem from scratch and comparing endpoints.
+- The benchmark therefore tests **step-by-step verification**, not just problem solving.
+- In current project results, reasoning-enabled models are much stronger at **localizing** the first bad step, not just saying that something is wrong.
 
-That matters because a "shallow" checker can often get away with re-executing the reasoning and comparing the endpoint:
+## Why This Benchmark Exists
 
-- if the endpoint is wrong, say "there is an error"
-- if the endpoint is right, say "no error"
+Many self-error-detection benchmarks are easier to game than they look.
 
-This means the LLM isn't actually checking its steps - Rather, it's recomputing the whole reasoning chain, and comparing the final answers. This is not the behaviour we want, as we'd like to test whether the model can verify errors against rules and constraints. 
+- They rely on human annotations, which are expensive and hard to scale.
+- They use familiar domains such as mathematics, where models can pattern-match from training data.
+- They often use cascading errors, where one bad step causes a wrong final answer.
 
-`E-RECONV` breaks that shortcut. The endpoint is still correct. The only way to succeed is to verify the steps themselves.
+That last point matters. If the final answer is wrong, a shallow checker can often get away with:
 
-## 🤗 Why Emojis? 
-We use emojis as mathematical abstracts to prevent the model from being able to use its mathematical knowledge from its math training data to solve the questions. A model may know `1 + 1 = 2` from its training, but it wouldn't know `🌸 (+) 🤗 = 👋`.
+- re-deriving the solution from scratch
+- comparing the endpoint
+- declaring "there is an error" without actually verifying where the chain broke
 
-There are many substitutes to emojis. We could have also defined an operation like `1 + 7 = 4` - Our experiments demonstrate that results with either emojis or numbers for abstract operations yield similar results. The choice to keep it as emojis was partly to enhance the visuality of the project.
+Emoji-Bench is designed to remove that shortcut.
 
-## 🧳 Benchmark Shape
+- The tasks are procedurally generated.
+- The formal systems are novel and absent from training corpora.
+- The benchmark condition is reconvergent: the final answer is still correct even though one step is not.
+
+## What Is `E-RECONV`?
+
+In `E-RECONV`, a derivation contains exactly one invalid step, but the chain still reaches the correct final answer.
+
+That means endpoint checking is useless. A model cannot succeed just by recomputing the answer and confirming that the result matches. It has to inspect the derivation itself and verify each step against the rules.
+
+## Example
+
+Below is a minimal reconvergent example in the same style used by the benchmark.
+
+```text
+=== RULES ===
+Symbols: {🐙, 🪬, 🫑}
+Operation ⊕ (defined by table):
+
+      🐙  🪬  🫑
+🐙    🐙  🐙  🪬
+🪬    🐙  🪬  🫑
+🫑    🐙  🪬  🪬
+
+=== YOUR WORKING OUT ===
+Start: ((🫑 ⊕ 🐙) ⊕ (🫑 ⊕ 🪬))
+Step 1: (🫑 ⊕ 🐙) = 🐙
+Step 2: (🫑 ⊕ 🪬) = 🐙
+Step 3: (🐙 ⊕ 🐙) = 🐙
+Result: 🐙
+
+=== TASK ===
+Check whether your working out contains an error. It may or may not contain an error.
+```
+
+The final answer is `🐙`, which is still correct. But `Step 2` is invalid: from the table, `🫑 ⊕ 🪬 = 🪬`, not `🐙`.
+
+The intended structured output is:
+
+```json
+{"has_error": true, "error_step": 2}
+```
+
+## Benchmark Shape
 
 Each example gives the model:
 
-- a procedurally generated **novel** formal system built from emoji symbols
-- operation tables and optional transforms / derived operations
+- a procedurally generated formal system built from emoji symbols
+- operation tables and optional transforms or derived operations
 - a worked derivation
-- a task: return `has_error` and `error_step`
+- a task to return `has_error` and `error_step`
 
 Difficulty scales by system complexity:
 
@@ -48,26 +96,37 @@ Difficulty scales by system complexity:
 | Hard | 5 | 2 | 1 | 1 |
 | Expert | 6 | 2 | 2 | 2 |
 
-## ⏰ Quick Start
+## Metrics
 
-Install the project and dev dependencies:
+Two metrics matter most:
+
+- `Detection Rate`: does the model correctly identify that an error is present?
+- `Error Localized`: does the model also name the exact first wrong step?
+
+The gap between those two numbers is informative. A model can often tell that "something is wrong" without actually tracing the error to its source.
+
+## Quick Start
+
+### Requirements
+
+- Python `>=3.11`
+- `uv`
+
+### Install
+
+Install the package, test dependencies, and optional helpers in one step:
 
 ```bash
-uv pip install -e ".[dev]"
+uv pip install -e ".[dev,hf,openai,anthropic]"
 ```
 
-If you want to evaluate OpenAI or Anthropic models through the shared CLI:
+Provider notes:
 
-```bash
-uv pip install -e ".[openai,anthropic]"
-```
-
-Set whichever API keys you need:
-
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `GEMINI_API_KEY`
-- `MISTRAL_API_KEY`
+- OpenAI models require `OPENAI_API_KEY`.
+- Anthropic models require `ANTHROPIC_API_KEY`.
+- Gemini models require `GEMINI_API_KEY`.
+- Mistral models require `MISTRAL_API_KEY`.
+- Gemini and Mistral requests use the standard library HTTP client, so there is no separate extra to install for them.
 
 Run tests:
 
@@ -75,9 +134,7 @@ Run tests:
 pytest
 ```
 
-## ⭐️ Dataset
-
-### Download The `E-RECONV` Dataset
+### Download The Public `E-RECONV` Dataset
 
 ```bash
 uv run --extra hf python - <<'PY'
@@ -91,7 +148,38 @@ snapshot_download(
 PY
 ```
 
-### Generate An `E-RECONV` Dataset Locally
+Preview a few prompts:
+
+```bash
+python scripts/preview_dataset.py artifacts/emoji-bench-e-reconv-1000 --count 3
+```
+
+Run a small evaluation:
+
+```bash
+uv run --extra openai python scripts/evaluate_model.py \
+  artifacts/emoji-bench-e-reconv-1000 \
+  --model gpt-5.4-mini \
+  --limit 2
+```
+
+Build reports:
+
+```bash
+python scripts/analyze_evals.py artifacts/evals
+```
+
+## Dataset
+
+### Download
+
+The public dataset lives at:
+
+- `huyxdang/emoji-bench-e-reconv-1000`
+
+It contains 1,000 prompt-only `E-RECONV` benchmark instances.
+
+### Generate Locally
 
 ```bash
 python scripts/generate_reconvergent_dataset.py \
@@ -100,19 +188,38 @@ python scripts/generate_reconvergent_dataset.py \
   --count 1000
 ```
 
-The generator guarantees the requested count by continuing to search until it finds enough reconvergent examples.
+The generator keeps searching until it finds enough reconvergent examples to satisfy the exact requested count.
 
-If you want a different dataset, change `--count` and optionally `--master-seed`.
+Useful knobs:
 
-## 👀 Preview Examples
+- change `--count` to generate a smaller or larger dataset
+- change `--master-seed` for a different deterministic sample
+- use `--target-length` or `--length-overrides` to adjust derivation length by difficulty
 
-To inspect the dataset in a more readable format:
+### File Layout
 
-```bash
-python scripts/preview_dataset.py artifacts/emoji-bench-e-reconv-1000 --count 5
-```
+A generated dataset directory contains:
 
-## 🧪 Evaluate Models
+- `train.jsonl`
+- `validation.jsonl`
+- `test.jsonl`
+- `manifest.json`
+- `README.md`
+
+### Key Fields
+
+The main dataset fields are:
+
+- `example_id`: unique row id
+- `split`: `train`, `validation`, or `test`
+- `difficulty`: `easy`, `medium`, `hard`, or `expert`
+- `has_error`: whether the prompt contains an error
+- `expected_error_step`: the ground-truth first wrong step
+- `prompt`: the full prompt shown to the model
+- `system_json`: serialized formal system for reproducibility
+- `system_seed`, `chain_seed`, `error_seed`: generation metadata
+
+## Evaluate Models
 
 List configured models:
 
@@ -120,22 +227,22 @@ List configured models:
 python scripts/evaluate_model.py --list-models
 ```
 
-Run a quick smoke test:
+Run a smoke test on a local dataset directory or `test.jsonl` file:
 
 ```bash
-uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
+python scripts/evaluate_model.py \
   artifacts/emoji-bench-e-reconv-1000 \
   --model gpt-5.4-mini \
-  --limit 2
+  --limit 5
 ```
 
-Run a larger reconvergent batch with the dedicated wrapper:
+Run a larger reconvergent batch with the wrapper:
 
 ```bash
 LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run_reconv.sh
 ```
 
-Run only one model:
+Run a single model:
 
 ```bash
 LIMIT=10 SHARDS_PER_MODEL=2 MODEL_PARALLELISM=2 ./scripts/run_reconv.sh claude-sonnet-4-6-reasoning
@@ -146,11 +253,12 @@ Useful notes:
 - model configs live in `emoji_bench/model_registry.py`
 - provider request logic lives in `emoji_bench/provider_eval.py`
 - reruns resume from existing `predictions.jsonl` unless you pass `--no-resume`
-- eval outputs are written under `artifacts/evals/...`
+- default eval outputs are written under `artifacts/evals/...`
+- the wrapper downloads the public dataset into `artifacts/emoji-bench-e-reconv-1000` by default
 
-## 📊 Reports
+## Reports
 
-Aggregate eval outputs into CSV and HTML reports:
+Aggregate evaluation outputs into CSV and HTML reports:
 
 ```bash
 python scripts/analyze_evals.py artifacts/evals
@@ -168,7 +276,7 @@ By default that report is written to:
 artifacts/eval-report-e-reconv-1000
 ```
 
-## 🗺️ Repo Map
+## Repo Map
 
 - `emoji_bench/reconvergent_error_injector.py`: `E-RECONV` injection logic
 - `emoji_bench/reconvergent_dataset.py`: exact-count reconvergent dataset generation
@@ -176,13 +284,33 @@ artifacts/eval-report-e-reconv-1000
 - `emoji_bench/chain_generator.py`: derivation generation
 - `emoji_bench/benchmark.py`: benchmark-instance assembly
 - `emoji_bench/provider_eval.py`: provider-specific evaluation requests
-- `emoji_bench/reporting.py`: eval aggregation and report rendering
+- `emoji_bench/reporting.py`: evaluation aggregation and report rendering
 - `scripts/generate_reconvergent_dataset.py`: `E-RECONV` dataset generation
-- `scripts/preview_dataset.py`: readable dataset preview
+- `scripts/preview_dataset.py`: terminal-friendly prompt preview
+- `scripts/evaluate_model.py`: shared evaluation CLI
 - `scripts/run_reconv.sh`: reconvergent evaluation wrapper
 
-## 🎯 Why Only `E-RECONV`
+## Why Emojis?
 
-Earlier versions of the project included other error types as well (as you can tell from the extra files), and we did run experiments on them. But the project now centers only `E-RECONV`.
+Emoji symbols make the formal systems visually legible while keeping them novel. A model may know `1 + 1 = 2` from training, but it does not come pre-trained on a fresh symbolic system such as `🌸 (+) 🤗 = 👋`.
 
-It is the cleanest experiment for the goal above. If the final answer is still correct, endpoint checking is no longer enough. A model either catches the bad step or it doesn’t. That makes `E-RECONV` the most direct test of whether models can accurately detect their own reasoning errors.
+The benchmark could use other abstract labels as well. Earlier experiments with numeric relabelings produced similar behavior, but emojis make the tasks easier to inspect and discuss.
+
+## Why Only `E-RECONV`?
+
+Earlier versions of the project included multiple error types, and the repository still contains some of that machinery. The benchmark now centers on `E-RECONV` because it is the cleanest test of step-level verification.
+
+If the final answer remains correct, endpoint comparison no longer helps. A model either catches the bad step or it does not.
+
+## Contributing
+
+Issues and pull requests are welcome, especially around:
+
+- benchmark design
+- provider integrations
+- evaluation/reporting improvements
+- analysis of model behavior on `E-RECONV`
+
+## License
+
+MIT. See `LICENSE`.
