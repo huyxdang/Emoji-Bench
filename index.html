@@ -462,23 +462,26 @@
     .reveal-content {
       border-top: 1px solid var(--faint);
       padding-top: 20px; margin-top: 16px;
-      font-size: 0.84rem; line-height: 1.72;
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 0.87rem; line-height: 1.72;
     }
 
     .reveal-verdict {
-      font-weight: 700; font-size: 0.88rem;
-      margin-bottom: 10px; color: var(--ink);
+      font-weight: 700; font-size: 0.95rem;
+      margin-bottom: 12px; color: var(--ink);
     }
 
     .reveal-content p { color: var(--muted); margin-bottom: 10px; }
 
-    .reveal-table-wrap { margin: 16px 0; }
-
-    .reveal-steps {
-      display: flex; flex-direction: column;
-      gap: 4px;
-      margin: 16px 0;
+    .reveal-content .eq {
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.88em;
+      background: rgba(0,0,0,0.04);
+      padding: 1px 5px;
+      border-radius: 3px;
     }
+
+    .reveal-table-wrap { margin: 16px 0; }
 
     .reveal-twist {
       font-weight: 600;
@@ -513,6 +516,7 @@
     }
 
     .converge-card-label {
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
       font-size: 0.68rem; font-weight: 700;
       letter-spacing: 0.08em; text-transform: uppercase;
       margin-bottom: 8px;
@@ -1077,9 +1081,11 @@
   // Build reveal content once (hidden by default)
   result.innerHTML =
     '<div class="reveal-content">' +
-      '<div class="reveal-verdict">The error is at <strong>Step 2</strong>.</div>' +
-      '<p>Step 2 claims <strong>🫑\u00a0\u2295\u00a0🪬\u00a0=\u00a0🐙</strong>. ' +
-      'But look at the table \u2014 row\u00a0🫑, col\u00a0🪬:</p>' +
+      '<div class="reveal-verdict">The error is at Step 2.</div>' +
+
+      '<p>Step 2 claims <span class="eq">🫑\u00a0\u2295\u00a0🪬\u00a0=\u00a0🐙</span>, ' +
+      'but if we look at row\u00a0🫑 and column\u00a0🪬 in the table, ' +
+      'the correct value is <strong>🪬</strong>, not\u00a0🐙.</p>' +
 
       '<div class="reveal-table-wrap">' +
         '<table class="op-table">' +
@@ -1095,15 +1101,7 @@
         '</table>' +
       '</div>' +
 
-      '<p>The correct value is\u00a0<strong>🪬</strong>, not\u00a0🐙.</p>' +
-
-      '<div class="reveal-steps">' +
-        '<div class="prompt-step">Step 1: (🫑\u00a0\u2295\u00a0🐙) = 🐙 \u00a0 [by \u2295 table]</div>' +
-        '<div class="prompt-step is-error">Step 2: (🫑\u00a0\u2295\u00a0🪬) = 🐙 \u00a0 [by \u2295 table]</div>' +
-        '<div class="prompt-step">Step 3: (🐙\u00a0\u2295\u00a0🐙) = 🐙 \u00a0 [by \u2295 table]</div>' +
-      '</div>' +
-
-      '<p class="reveal-twist">If we fix the error, does it change the final answer? No!</p>' +
+      '<p class="reveal-twist">If we fix the error, does it change the final answer?</p>' +
 
       '<div class="converge-cards">' +
 
@@ -1129,7 +1127,7 @@
       '<div class="key-insight">' +
         '<strong>This is a reconvergent error.</strong> ' +
         'Because the flawed and corrected logic reach the exact same result, ' +
-        'a model cannot "hack" this test by re-calculating the final answer. ' +
+        'a model cannot \u201chack\u201d this test by simply re-calculating the final answer. ' +
         'It must trace the reasoning step-by-step.' +
       '</div>' +
     '</div>';
