@@ -590,6 +590,12 @@
 
     .benchmark-chart { display: grid; gap: 6px; }
 
+    .chart-divider {
+      border: none;
+      border-top: 1.5px dashed var(--faint);
+      margin: 4px 0;
+    }
+
     .benchmark-row {
       display: grid;
       grid-template-columns: 215px 1fr 56px;
@@ -791,19 +797,18 @@
 <section class="section" id="idea">
   <div class="container">
     <div class="section-label">The Idea</div>
-    <h2>Most verification benchmarks can be gamed by re-execution.</h2>
+    <h2>Can a model accurately detect its own reasoning error?</h2>
     <div class="prose">
       <p>
-        The standard way to test whether a model can check a reasoning chain: give it a
-        derivation and ask whether it's correct. But a model can pass this without reading
-        the steps at all — just re-execute the chain from scratch, compare the result to
-        the claimed endpoint, and flag any mismatch. This looks like verification. It isn't.
+        The goal is to test metacognitive error detection.
+        A model may be strong enough to solve a problem from scratch and still fail to notice
+        that a shown derivation contains a wrong step. Emoji-Bench is built to isolate that distinction.
       </p>
       <p>
-        Emoji-Bench isolates the specific case where this shortcut breaks: a derivation
-        where one intermediate step violates the rules, but the chain recovers and reaches
-        the correct final answer anyway. The endpoint looks fine. Only step-level attention
-        catches the error.
+        A natural shortcut is to re-execute the chain and compare the final answer.
+        If the endpoint matches, say "no error." Emoji-Bench breaks that shortcut:
+        one intermediate step violates the rules, but the chain still reaches the correct final answer.
+        Endpoint comparison gives the wrong verdict. The only way to pass is to check each step directly.
       </p>
     </div>
 
@@ -832,9 +837,11 @@
 
     <div class="prose">
       <p>
-        The formal systems use emoji as their symbols — not numbers, algebra, or any domain
-        a model has seen before. Every rule must be read from the tables provided in the
-        prompt. There is no pattern to recall, no shortcut to take.
+        We use emoji symbols as abstract mathematical objects to prevent models from reaching
+        into their training data. A model may know that 1&nbsp;+&nbsp;1&nbsp;=&nbsp;2, but it has no
+        prior knowledge of 🌸&nbsp;⊕&nbsp;🤗. Every rule has to be read from the prompt.
+        That keeps the benchmark focused on step-level verification against new rules,
+        not recall of familiar facts.
       </p>
     </div>
   </div>
@@ -846,14 +853,14 @@
 <section class="section" id="example">
   <div class="container">
     <div class="section-label">Try It Yourself</div>
-    <h2>Walk through a real benchmark instance.</h2>
+    <h2>Walk through a real example.</h2>
     <p class="section-desc">
-      This is an actual example from the test set. Read the rules, follow the steps, and
+      Read the rules, follow the steps, and
       try to spot where the reasoning goes wrong — without checking the final answer.
     </p>
 
     <div class="demo-card">
-      <div class="demo-phase-label">Formal System — "Orix System"</div>
+      <div class="demo-phase-label">Formal System</div>
 
       <div class="demo-system">
         <div class="system-symbols">
@@ -948,12 +955,11 @@
 
     <div class="gap-legend">
       <span class="gap-legend-item">
-        <span class="leg-dot-hollow"></span> Detection rate (hollow)
+        <span class="leg-dot-filled"></span> Step accuracy
       </span>
       <span class="gap-legend-item">
-        <span class="leg-dot-filled"></span> Step accuracy (filled)
+        <span class="leg-dot-hollow"></span> Detection rate
       </span>
-      <span style="margin-left:6px; color:var(--muted)">— sorted by step accuracy</span>
     </div>
 
     <div class="gap-axis-row">
@@ -979,7 +985,7 @@
 ================================================================ -->
 <div class="container">
   <div class="footer-wrap">
-    <span>Emoji-Bench — step-level error detection.</span>
+    <span>By Huy Dang</span>
     <div class="footer-links">
       <a href="https://github.com/huyxdang/Emoji-Bench" target="_blank" rel="noreferrer">Repository</a>
       <a href="https://huggingface.co/datasets/huyxdang/emoji-bench-e-reconv-1000" target="_blank" rel="noreferrer">Dataset</a>
@@ -1161,15 +1167,15 @@ document.getElementById('demo-question').addEventListener('click', e => {
    DUMBBELL / GAP CHART
 ------------------------------------------------------------------ */
 const GAP_DATA = [
-  { name: 'GPT-5.4',              provider: 'openai',    detect: 97.1, step: 97.1 },
-  { name: 'GPT-5.4 nano',         provider: 'openai',    detect: 94.1, step: 93.1 },
-  { name: 'GPT-5.4 mini',         provider: 'openai',    detect: 94.8, step: 93.0 },
-  { name: 'Sonnet 4.6 (thinking)',provider: 'anthropic', detect: 91.9, step: 91.6 },
-  { name: 'Claude Sonnet',        provider: 'anthropic', detect: 53.1, step: 40.6 },
-  { name: 'Claude Haiku',         provider: 'anthropic', detect: 65.8, step: 40.5 },
-  { name: 'GPT-4.1 mini',         provider: 'openai',    detect: 85.8, step: 38.0 },
-  { name: 'Mistral Large',        provider: 'mistral',   detect: 77.7, step: 37.0 },
-  { name: 'Mistral Medium',       provider: 'mistral',   detect: 68.4, step: 30.9 }
+  { name: 'GPT-5.4',       thinking: true,  provider: 'openai',    detect: 97.1, step: 97.1 },
+  { name: 'GPT-5.4 nano',  thinking: true,  provider: 'openai',    detect: 94.1, step: 93.1 },
+  { name: 'GPT-5.4 mini',  thinking: true,  provider: 'openai',    detect: 94.8, step: 93.0 },
+  { name: 'Sonnet 4.6',    thinking: true,  provider: 'anthropic', detect: 91.9, step: 91.6 },
+  { name: 'Sonnet 4.6',    thinking: false, provider: 'anthropic', detect: 53.1, step: 40.6 },
+  { name: 'Haiku 4.5',     thinking: false, provider: 'anthropic', detect: 65.8, step: 40.5 },
+  { name: 'GPT-4.1 mini',  thinking: false, provider: 'openai',    detect: 85.8, step: 38.0 },
+  { name: 'Large 3',       thinking: false, provider: 'mistral',   detect: 77.7, step: 37.0 },
+  { name: 'Medium 3.1',    thinking: false, provider: 'mistral',   detect: 68.4, step: 30.9 }
 ].sort((a, b) => b.step - a.step);
 
 const PROVIDER_COLOR = { openai: '#1f9d8b', anthropic: '#96633f', mistral: '#d85732' };
@@ -1185,21 +1191,20 @@ function buildGapChart() {
     row.className = 'dumbbell-row';
     row.innerHTML =
       '<div class="db-name">' +
-        '<div class="db-dot" style="background:' + color + '"></div>' +
-        '<span>' + d.name + '</span>' +
+        '<span class="provider-logo">' + LOGOS[d.provider] + '</span>' +
+        '<span>' + d.name + (d.thinking ? ' <span class="thinking-tag">thinking</span>' : '') + '</span>' +
       '</div>' +
       '<div class="db-track">' +
-        '<div class="db-line" style="left:' + lo + '%;right:' + (100 - hi) + '%"></div>' +
-        '<div class="db-circle hollow" style="left:' + d.detect + '%;--color:' + color + '"></div>' +
+        '<div class="db-line" style="left:' + d.step + '%;right:' + (100 - d.step) + '%"' +
+          ' data-lo="' + lo + '" data-hi-right="' + (100 - hi) + '"></div>' +
+        '<div class="db-circle hollow" style="left:' + d.step + '%;--color:' + color + '"' +
+          ' data-target="' + d.detect + '"></div>' +
         '<div class="db-circle filled" style="left:' + d.step + '%;--color:' + color + '"></div>' +
       '</div>' +
-      '<div class="db-vals">' + d.detect.toFixed(1) + ' / ' + d.step.toFixed(1) + '</div>';
+      '<div class="db-vals">' + d.step.toFixed(1) + ' / ' + d.detect.toFixed(1) + '</div>';
     container.appendChild(row);
   });
 }
-
-buildGapChart();
-
 
 /* ------------------------------------------------------------------
    BENCHMARK LEADERBOARD
@@ -1264,7 +1269,9 @@ const LOGOS = {
   mistral:   '<img src="public/mistral.png" alt="Mistral" width="18" height="18">'
 };
 
-let currentMetric     = 'detection';
+buildGapChart();
+
+let currentMetric     = 'step';
 let currentDifficulty = 'overall';
 
 const elMetricBtns     = document.getElementById('metricButtons');
@@ -1295,6 +1302,12 @@ function renderBenchmarkChart() {
   elChart.innerHTML = '';
 
   sorted.forEach((model, i) => {
+    if (i > 0 && sorted[i - 1].thinking && !model.thinking) {
+      const divider = document.createElement('hr');
+      divider.className = 'chart-divider';
+      elChart.appendChild(divider);
+    }
+
     const value = values[model.id];
     const color = PROVIDER_COLOR[model.provider];
     const row   = document.createElement('div');
@@ -1328,6 +1341,32 @@ function animateBars() {
       if (fill) fill.style.width = fill.dataset.width + '%';
     });
   });
+}
+
+/* Finding chart — detection rate slides out from step accuracy on scroll-in */
+const findingSection = document.getElementById('finding');
+if (findingSection) {
+  let findingDone = false;
+  new IntersectionObserver((entries, obs) => {
+    if (!entries[0].isIntersecting || findingDone) return;
+    findingDone = true;
+    obs.disconnect();
+    const easing = '0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    const container = document.getElementById('gap-chart');
+    container.querySelectorAll('.db-line').forEach((line, i) => {
+      setTimeout(() => {
+        line.style.transition = 'left ' + easing + ', right ' + easing;
+        line.style.left  = line.dataset.lo + '%';
+        line.style.right = line.dataset.hiRight + '%';
+      }, i * 70);
+    });
+    container.querySelectorAll('.db-circle.hollow').forEach((circle, i) => {
+      setTimeout(() => {
+        circle.style.transition = 'left ' + easing;
+        circle.style.left = circle.dataset.target + '%';
+      }, i * 70);
+    });
+  }, { threshold: 0.15 }).observe(findingSection);
 }
 
 let benchmarkVisible = false;
