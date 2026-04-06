@@ -190,13 +190,11 @@
       border-radius: 3px;
       padding: 1px 3px;
       margin: -1px -3px;
-      background-color: transparent;
-      transition: background-color 400ms ease;
       cursor: default;
     }
-    .hl[data-pair="1"].is-lit { background-color: #fef3c7; }
-    .hl[data-pair="2"].is-lit { background-color: #d1fae5; }
-    .hl[data-pair="3"].is-lit { background-color: #fee2e2; }
+    .hl[data-pair="1"] { background-color: #fef3c7; }
+    .hl[data-pair="2"] { background-color: #d1fae5; }
+    .hl[data-pair="3"] { background-color: #fee2e2; }
 
 
     .section--dark .section-label,
@@ -856,7 +854,6 @@
 <div class="hero-body">
   <div class="hero-title-wrap">
     <h1>Emoji Bench <span id="hero-em">🐙</span></h1>
-    <p class="lead">April 2026 · Huy Dang</p>
   </div>
 
   <div class="hero-links">
@@ -1063,27 +1060,6 @@
 ================================================================ -->
 <script>
 'use strict';
-
-/* ------------------------------------------------------------------
-   IDEA SECTION — paired highlight on hover
------------------------------------------------------------------- */
-(function () {
-  var allHL = document.querySelectorAll('.hl[data-pair]');
-  allHL.forEach(function (el) {
-    el.addEventListener('mouseenter', function () {
-      var pair = el.dataset.pair;
-      allHL.forEach(function (s) {
-        if (s.dataset.pair === pair) s.classList.add('is-lit');
-      });
-    });
-    el.addEventListener('mouseleave', function () {
-      var pair = el.dataset.pair;
-      allHL.forEach(function (s) {
-        if (s.dataset.pair === pair) s.classList.remove('is-lit');
-      });
-    });
-  });
-}());
 
 /* ------------------------------------------------------------------
    HERO EMOJI SWAP — change the title emoji each time hero re-enters view
