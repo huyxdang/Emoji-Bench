@@ -28,7 +28,7 @@ This means the LLM isn't actually checking its steps - Rather, it's recomputing 
 This makes `E-RECONV` the cleanest setting for the benchmark’s core question: does the model actually notice its own reasoning error, or does it accept an invalid derivation because the conclusion looks fine?
 
 ## Why Emojis? 
-We use emojis as mathematical abstracts to prevent the model from being able to use its mathematical knowledge from its math training data. A model may know `1 + 1 = 2`, but it wouldn't know `🌸 (+) 🤗 = 👋`.
+We use emojis as mathematical abstracts to prevent the model from being able to use its mathematical knowledge from its math training data to solve the questions. A model may know `1 + 1 = 2` from its training, but it wouldn't know `🌸 (+) 🤗 = 👋`.
 
 There are many substitutes to emojis. We could have also defined an operation like `1 + 7 = 4` - Our experiments demonstrate that results with either emojis or numbers for abstract operations yield similar results. The choice to keep it as emojis was partly to enhance the visuality of the project.
 
