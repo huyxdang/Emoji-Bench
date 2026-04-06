@@ -4,17 +4,37 @@
 
 # Emoji-Bench
 
-Emoji-Bench is a benchmark for step-level error detection in procedurally generated formal systems built from emoji symbols. The point is to test whether a model actually verifies rules and intermediate steps, rather than just noticing that the final answer is wrong.
+Emoji-Bench asks a simple question:
+
+**When a model makes an error in a reasoning chain, is it able to detect that error accurately?**
+
+The goal is to test metacognitive error detection, not just problem solving. A model might be able to compute the right answer from scratch and still fail to notice that a shown derivation contains a bad step. Emoji-Bench is built to isolate that distinction.
+
+This repo is now focused on a single benchmark condition: **`E-RECONV`**.
+
+## What `E-RECONV` Tests
+
+In `E-RECONV`, a derivation contains exactly one invalid step, but the chain still reaches the correct final answer.
+
+That matters because a shallow checker can often get away with re-executing the chain and comparing the endpoint:
+
+- if the endpoint is wrong, say "there is an error"
+- if the endpoint is right, say "no error"
+
+`E-RECONV` breaks that shortcut. The endpoint is still correct. The only way to succeed is to verify the steps themselves.
+
+This makes `E-RECONV` the cleanest setting for the benchmark’s core question: does the model actually notice its own reasoning error, or does it accept an invalid derivation because the conclusion looks fine?
+
+## Benchmark Shape
 
 Each example gives the model:
 
-- a random formal system with symbols, operation tables, transforms, and optional derived operations
+- a procedurally generated formal system built from emoji symbols
+- operation tables and optional transforms / derived operations
 - a worked derivation
 - a task: return `has_error` and `error_step`
 
-## What It Tests
-
-The benchmark is designed to separate endpoint checking from real step verification.
+Difficulty scales by system complexity:
 
 | Difficulty | Symbols | Base Ops | Derived Ops | Transforms |
 |---|---:|---:|---:|---:|
@@ -23,81 +43,69 @@ The benchmark is designed to separate endpoint checking from real step verificat
 | Hard | 5 | 2 | 1 | 1 |
 | Expert | 6 | 2 | 2 | 2 |
 
-## Error Types
-
-- `E-RES`: a valid rule is cited, but the result is wrong
-- `E-INV`: the step cites a plausible-looking rule that does not exist
-- `E-CASC`: one early step is wrong and the suffix is recomputed, so later steps are locally valid but the final answer is wrong
-- `E-RECONV`: one early step is wrong and the suffix is recomputed, but the chain still reaches the correct final answer
-
-`E-RECONV` is the most important anti-shortcut condition here. A model that only re-executes the chain and compares the endpoint can miss it completely.
-
 ## Quick Start
 
-Install the base project and test dependencies:
+Install the project and dev dependencies:
 
 ```bash
 uv pip install -e ".[dev]"
 ```
 
-If you want to evaluate OpenAI or Anthropic models through the shared CLI, install those extras too:
+If you want to evaluate OpenAI or Anthropic models through the shared CLI:
 
 ```bash
 uv pip install -e ".[openai,anthropic]"
 ```
 
-Gemini and Mistral use direct HTTPS integrations in this repo, so they do not need extra Python packages. Set the relevant API key before running evaluation:
+Set whichever API keys you need:
 
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `GEMINI_API_KEY`
 - `MISTRAL_API_KEY`
 
-Run the test suite:
+Run tests:
 
 ```bash
 pytest
 ```
 
-## Datasets
+## Dataset
 
-### Download The Mixed 2,000-Example Dataset
+### Download The `E-RECONV` Dataset
 
 ```bash
 uv run --extra hf python - <<'PY'
 from huggingface_hub import snapshot_download
 
 snapshot_download(
-    repo_id="huyxdang/emoji-bench-mixed-2000",
+    repo_id="huyxdang/emoji-bench-e-reconv-1000",
     repo_type="dataset",
-    local_dir="artifacts/emoji-bench-mixed-2000",
+    local_dir="artifacts/emoji-bench-e-reconv-1000",
 )
 PY
 ```
 
-The evaluator can then point at `artifacts/emoji-bench-mixed-2000` directly.
-
-### Generate A Mixed Dataset Locally
-
-```bash
-python scripts/generate_dataset.py \
-  --dataset-name emoji-bench-mixed-2000 \
-  --output-dir artifacts/emoji-bench-mixed-2000 \
-  --count 2000 \
-  --train-ratio 0 \
-  --validation-ratio 0
-```
-
-### Generate An `E-RECONV`-Only Dataset With An Exact Count
+### Generate An `E-RECONV` Dataset Locally
 
 ```bash
 python scripts/generate_reconvergent_dataset.py \
-  --dataset-name emoji-bench-e-reconv-500 \
-  --output-dir artifacts/emoji-bench-e-reconv-500 \
-  --count 500
+  --dataset-name emoji-bench-e-reconv-1000 \
+  --output-dir artifacts/emoji-bench-e-reconv-1000 \
+  --count 1000
 ```
 
-That script generates only `E-RECONV` rows and keeps searching until it reaches the requested count.
+The generator guarantees the requested count by continuing to search until it finds enough reconvergent examples.
+
+If you want a different dataset, change `--count` and optionally `--master-seed`.
+
+## Preview Examples
+
+To inspect the dataset in a more readable format:
+
+```bash
+python scripts/preview_dataset.py artifacts/emoji-bench-e-reconv-1000 --count 5
+```
 
 ## Evaluate Models
 
@@ -107,43 +115,33 @@ List configured models:
 python scripts/evaluate_model.py --list-models
 ```
 
-Run one smoke test with the shared evaluator:
+Run a quick smoke test:
 
 ```bash
 uv run --extra openai --extra anthropic python scripts/evaluate_model.py \
-  artifacts/emoji-bench-mixed-2000 \
+  artifacts/emoji-bench-e-reconv-1000 \
   --model gpt-5.4-mini \
   --limit 2
 ```
 
-Run a Gemini model:
+Run a larger reconvergent batch with the dedicated wrapper:
 
 ```bash
-python scripts/evaluate_gemini.py \
-  artifacts/emoji-bench-mixed-2000 \
-  --model gemini-3-flash-preview \
-  --limit 2
+LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run_reconv.sh
 ```
 
-Run a larger batch with the wrapper:
+Run only one model:
 
 ```bash
-LIMIT=500 ./scripts/run.sh
-```
-
-Run sharded full-dataset evals for the Gemini models:
-
-```bash
-LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=8 ./scripts/run.sh \
-  gemini-3-flash-preview gemini-3.1-pro-preview
+LIMIT=10 SHARDS_PER_MODEL=2 MODEL_PARALLELISM=2 ./scripts/run_reconv.sh claude-sonnet-4-6-reasoning
 ```
 
 Useful notes:
 
-- configured models live in `emoji_bench/model_registry.py`
+- model configs live in `emoji_bench/model_registry.py`
 - provider request logic lives in `emoji_bench/provider_eval.py`
 - reruns resume from existing `predictions.jsonl` unless you pass `--no-resume`
-- evaluation outputs are written under `artifacts/evals/...`
+- eval outputs are written under `artifacts/evals/...`
 
 ## Reports
 
@@ -153,20 +151,33 @@ Aggregate eval outputs into CSV and HTML reports:
 python scripts/analyze_evals.py artifacts/evals
 ```
 
-By default this writes report artifacts to `artifacts/eval-report`.
+For reconvergent-only runs, the wrapper already writes a scoped report:
+
+```bash
+./scripts/run_reconv.sh
+```
+
+By default that report is written to:
+
+```text
+artifacts/eval-report-e-reconv-1000
+```
 
 ## Repo Map
 
+- `emoji_bench/reconvergent_error_injector.py`: `E-RECONV` injection logic
+- `emoji_bench/reconvergent_dataset.py`: exact-count reconvergent dataset generation
 - `emoji_bench/generator.py`: formal-system generation
-- `emoji_bench/chain_generator.py`: step-by-step derivation generation
-- `emoji_bench/error_injector.py`: `E-RES`, `E-INV`, and `E-CASC`
-- `emoji_bench/reconvergent_error_injector.py`: `E-RECONV`
+- `emoji_bench/chain_generator.py`: derivation generation
 - `emoji_bench/benchmark.py`: benchmark-instance assembly
 - `emoji_bench/provider_eval.py`: provider-specific evaluation requests
 - `emoji_bench/reporting.py`: eval aggregation and report rendering
-- `scripts/generate_dataset.py`: mixed dataset generation
-- `scripts/generate_reconvergent_dataset.py`: exact-count `E-RECONV` dataset generation
-- `scripts/evaluate_model.py`: shared model evaluator
-- `scripts/run.sh`: multi-model evaluation wrapper
+- `scripts/generate_reconvergent_dataset.py`: `E-RECONV` dataset generation
+- `scripts/preview_dataset.py`: readable dataset preview
+- `scripts/run_reconv.sh`: reconvergent evaluation wrapper
 
-LIMIT=all SHARDS_PER_MODEL=4 MODEL_PARALLELISM=4 ./scripts/run_reconv.sh claude-sonnet-4-6-reasoning
+## Why Only `E-RECONV`
+
+Earlier versions of the project included other error types as well, and we did run experiments on them. But the project now centers only `E-RECONV`.
+
+The reason is simple: it is the cleanest experiment for the goal above. If the final answer is still correct, endpoint checking is no longer enough. A model either catches the bad step or it doesn’t. That makes `E-RECONV` the most direct test of whether models can accurately detect their own reasoning errors.
