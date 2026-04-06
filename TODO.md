@@ -1,11 +1,12 @@
-In order of Importance: 
 
+IMPORTANT:
 - [X] Link between Problem & Solution for Idea
 - [X] Try it yourself 
 - [X] Improve "The Finding" 
-
-
+- [ ] Add False Positive Rate (500 examples) 
 - [ ] Literature Review
+
+NICE TO HAVE:
 - [ ] Clean up repo for testing
 - [ ] Header UI.
 
