@@ -915,7 +915,7 @@
     <h2>Reasoning models win.</h2>
 
     <div class="benchmark-controls">
-      <div class="control-group" id="metricButtons">
+      <div class="control-group" id="metricButtons" style="display:none">
         <span class="control-label">Metric</span>
       </div>
       <div class="control-group" id="difficultyButtons">
@@ -933,8 +933,7 @@
     <div class="benchmark-chart" id="benchmarkChart" aria-live="polite"></div>
 
     <p class="benchmark-note">
-      Step accuracy is reported directly from the evaluation. On this dataset it equals joint accuracy —
-      every example contains an error, and the task requires both detecting it and naming the first bad step.
+      Error Traced is the share of examples where the model correctly identifies that an error exists <em>and</em> names the exact step where it first occurs.
     </p>
   </div>
 </section>
@@ -947,18 +946,18 @@
     <div class="section-label">The Finding</div>
     <h2>Detection and localization diverge sharply.</h2>
     <p class="section-desc">
-      Two metrics matter. <strong>Detection rate</strong>: does the model say an error exists?
-      <strong>Step accuracy</strong>: does it identify the exact first wrong step?
-      For models using re-execution shortcuts, these diverge.
+      Two metrics: <strong>Error Found</strong> — does the model say an error exists?
+      <strong>Error Traced</strong> — does it name the exact first wrong step?
+      For models using re-execution shortcuts, these diverge sharply.
       Models with extended thinking close the gap.
     </p>
 
     <div class="gap-legend">
       <span class="gap-legend-item">
-        <span class="leg-dot-filled"></span> Step accuracy
+        <span class="leg-dot-filled"></span> Error Traced (filled)
       </span>
       <span class="gap-legend-item">
-        <span class="leg-dot-hollow"></span> Detection rate
+        <span class="leg-dot-hollow"></span> Error Found (hollow)
       </span>
     </div>
 
@@ -969,13 +968,13 @@
       </div>
     </div>
 
-    <div id="gap-chart" aria-label="Dumbbell chart: detection rate vs step accuracy per model"></div>
+    <div id="gap-chart" aria-label="Dumbbell chart: Error Found vs Error Traced per model"></div>
 
     <div class="gap-callout">
-      <strong>Reading this chart:</strong> The hollow circle is detection rate; the filled circle is step accuracy.
-      A wide connecting line signals a model that detects errors but cannot pinpoint where —
+      <strong>Reading this chart:</strong> The filled circle is Error Traced; the hollow circle is Error Found.
+      A wide line signals a model that spots errors but cannot pinpoint where —
       consistent with endpoint-comparison heuristics rather than genuine step verification.
-      GPT-5.4 thinking models show near-zero gap, suggesting actual step-by-step reasoning.
+      GPT-5.4 thinking models show a near-zero gap, suggesting actual step-by-step reasoning.
     </div>
   </div>
 </section>
@@ -1222,13 +1221,9 @@ const MODELS = [
 ];
 
 const METRIC_CONFIG = {
-  detection: {
-    label: 'Detection Rate',
-    description: 'The model correctly identifies that an error is present.'
-  },
   step: {
-    label: 'Step Accuracy',
-    description: 'The model identifies the correct first wrong step.'
+    label: 'Error Traced',
+    description: 'The model correctly identifies that an error exists and names the exact step where it first occurs.'
   }
 };
 
