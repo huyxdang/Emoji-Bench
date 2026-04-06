@@ -11,11 +11,11 @@
        BASE
     ========================================================= */
     :root {
-      --bg:       #f5efea;
-      --ink:      #1a1a1a;
-      --muted:    #7a7067;
-      --faint:    rgba(0,0,0,0.06);
-      --faint2:   rgba(0,0,0,0.10);
+      --bg:       #fafafa;
+      --ink:      #111111;
+      --muted:    #6f6f6f;
+      --faint:    rgba(17,17,17,0.07);
+      --faint2:   rgba(17,17,17,0.12);
       --accent:   #8b5cf6;
       --gold:     #b8860b;
       --gold-bg:  rgba(184,134,11,0.06);
@@ -26,7 +26,7 @@
       --green:    #2d7a52;
       --green-bg: rgba(45,122,82,0.07);
       --green-bdr:rgba(45,122,82,0.30);
-      --surface:  #ede5dc;
+      --surface:  #ffffff;
       --openai:   #1f9d8b;
       --anthropic:#96633f;
       --mistral:  #d85732;
@@ -52,7 +52,7 @@
     code {
       font-family: "SFMono-Regular", Menlo, Consolas, monospace;
       font-size: 0.92em;
-      background: rgba(0,0,0,0.05);
+      background: rgba(0,0,0,0.04);
       padding: 1px 5px;
       border-radius: 3px;
     }
@@ -93,7 +93,8 @@
        HERO
     ========================================================= */
     .hero {
-      background: var(--surface);
+      background: #0a0a0a;
+      border-bottom: 1px solid #1b1b1b;
     }
 
     .hero-body {
@@ -114,23 +115,24 @@
       font-size: clamp(2.8rem, 6.5vw, 4rem);
       line-height: 1.05;
       letter-spacing: -0.03em;
+      color: #fafafa;
       position: relative;
       z-index: 1;
     }
 
     .hero-byline {
       font-size: 0.88rem;
-      color: var(--muted);
+      color: #8c8c8c;
       margin-bottom: 18px;
       margin-top: 10px;
     }
 
     .hero-byline a {
-      color: var(--muted);
+      color: #a78bfa;
       text-decoration: none;
     }
 
-    .hero-byline a:hover { color: var(--ink); opacity: 1; }
+    .hero-byline a:hover { color: #c4b5fd; opacity: 1; }
 
     .hero-links {
       display: flex; gap: 22px; flex-wrap: wrap;
@@ -140,20 +142,31 @@
     .hero-links a {
       display: inline-flex; align-items: center; gap: 7px;
       font-size: 0.88rem; font-weight: 600;
-      color: var(--accent);
+      color: #a78bfa;
       text-decoration: none;
-      transition: opacity 150ms;
+      transition: color 150ms, opacity 150ms;
     }
 
-    .hero-links a:hover { opacity: 0.7; }
+    .hero-links a:hover { color: #c4b5fd; opacity: 1; }
 
     .hero .lead {
       font-family: "Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
-      color: var(--muted);
+      color: #aaaaaa;
       font-size: clamp(1.15rem, 2.5vw, 1.45rem);
       line-height: 1.3;
       margin-top: 10px;
       margin-bottom: 0;
+    }
+
+    .hero .lead em {
+      font-style: normal;
+      color: #d6d6d6;
+    }
+
+    #hero-em {
+      display: inline-block;
+      margin-left: 0.06em;
+      filter: drop-shadow(0 10px 18px rgba(255,255,255,0.10));
     }
 
     /* =========================================================
@@ -229,9 +242,17 @@
     }
 
     .path {
-      border: 1px solid var(--faint2);
-      border-radius: 8px; padding: 20px 22px;
-      background: rgba(255,255,255,0.35);
+      border: 1px solid #e5e5e5;
+      border-radius: 10px; padding: 20px 22px;
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+    }
+
+    .path--right {
+      background: #101010;
+      border-color: #242424;
+      color: #f1f1f1;
+      box-shadow: 0 18px 42px rgba(0,0,0,0.14);
     }
 
     .path-label {
@@ -241,7 +262,7 @@
     }
 
     .path--wrong .path-label { color: var(--red); }
-    .path--right .path-label { color: var(--green); }
+    .path--right .path-label { color: #8ae0b5; }
 
     .path-steps {
       display: flex; flex-direction: column;
@@ -252,7 +273,8 @@
       font-size: 0.82rem;
       padding: 6px 10px; border-radius: 4px;
       font-family: "SFMono-Regular", Menlo, monospace;
-      background: rgba(0,0,0,0.03);
+      background: #f3f3f3;
+      color: var(--ink);
       line-height: 1.4;
     }
 
@@ -261,13 +283,34 @@
     .path-step.dim  { opacity: 0.3; }
     .path-step.result { font-weight: 600; }
 
+    .path--right .path-step {
+      background: rgba(255,255,255,0.06);
+      color: #ededed;
+    }
+
+    .path--right .path-step.flagged {
+      background: rgba(168,50,40,0.22);
+      color: #ffb9ae;
+    }
+
+    .path--right .path-step.dim { opacity: 0.42; }
+
     .path-verdict {
       font-size: 0.8rem; font-weight: 700;
       padding: 7px 10px; border-radius: 4px;
     }
 
-    .path-verdict.wrong { background: var(--red-bg); color: var(--red); }
-    .path-verdict.right { background: var(--green-bg); color: var(--green); }
+    .path-verdict.wrong {
+      background: #fff5f4;
+      color: var(--red);
+      border: 1px solid rgba(168,50,40,0.14);
+    }
+
+    .path-verdict.right {
+      background: rgba(45,122,82,0.18);
+      color: #bdf2d2;
+      border: 1px solid rgba(133,228,177,0.14);
+    }
 
     /* =========================================================
        INTERACTIVE DEMO
@@ -275,7 +318,8 @@
     .demo-card {
       border: 1px solid var(--faint2);
       border-radius: 10px; padding: 28px 30px;
-      background: rgba(255,255,255,0.55);
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.03);
       max-width: 640px;
     }
 
@@ -315,7 +359,7 @@
 
     .op-table th {
       font-weight: 700; font-size: 0.85rem;
-      background: rgba(0,0,0,0.04);
+      background: #f4f4f4;
     }
 
     .op-table td { font-size: 1.05rem; }
@@ -337,7 +381,7 @@
       grid-template-columns: 52px 1fr 36px;
       gap: 10px; align-items: start;
       padding: 9px 12px; border-radius: 5px;
-      background: rgba(0,0,0,0.03);
+      background: #f4f4f4;
       font-size: 0.86rem; line-height: 1.45;
       opacity: 0; transform: translateY(5px);
       transition: opacity 300ms ease, transform 300ms ease;
@@ -641,7 +685,7 @@
 
     .bar-track {
       height: 28px; border-radius: 4px;
-      background: rgba(0,0,0,0.04);
+      background: #efefef;
       overflow: hidden; position: relative;
     }
 
@@ -676,7 +720,7 @@
 
     .dataset-card {
       border: 1px solid var(--faint2); border-radius: 8px;
-      padding: 22px 24px; background: rgba(255,255,255,0.5);
+      padding: 22px 24px; background: #ffffff;
       text-decoration: none; color: var(--ink);
       display: block;
       transition: border-color 150ms, box-shadow 150ms;
@@ -697,7 +741,7 @@
     .citation-wrap { position: relative; }
 
     .citation-block {
-      background: rgba(0,0,0,0.03);
+      background: #f4f4f4;
       border: 1px solid var(--faint);
       border-radius: 7px; padding: 18px 20px;
       font-family: "SFMono-Regular", Menlo, monospace;
@@ -711,7 +755,7 @@
       position: absolute; top: 12px; right: 12px;
       appearance: none;
       border: 1px solid var(--faint2);
-      background: var(--bg); cursor: pointer;
+      background: #ffffff; cursor: pointer;
       font: inherit; font-size: 0.76rem;
       padding: 4px 10px; border-radius: 4px;
       color: var(--muted);
@@ -732,8 +776,8 @@
     }
 
     .footer-links { display: flex; gap: 20px; }
-    .footer-links a { color: var(--ink); font-weight: 600; font-size: 0.8rem; text-decoration: none; }
-    .footer-links a:hover { opacity: 0.7; }
+    .footer-links a { color: var(--accent); font-weight: 600; font-size: 0.8rem; text-decoration: none; }
+    .footer-links a:hover { color: #6d28d9; opacity: 1; }
 
     /* =========================================================
        RESPONSIVE
@@ -766,7 +810,7 @@
 <header class="hero" id="top">
 <div class="hero-body">
   <div class="hero-title-wrap">
-    <h1>Emoji Bench <span id="hero-em">🌸</span></h1>
+    <h1>Emoji Bench <span id="hero-em">🐙</span></h1>
     <p class="lead">Can models <em>really</em> self-detect errors?</p>
   </div>
 
