@@ -462,16 +462,81 @@
     .reveal-content {
       border-top: 1px solid var(--faint);
       padding-top: 20px; margin-top: 16px;
-      font-size: 0.87rem; line-height: 1.72;
+      font-size: 0.84rem; line-height: 1.72;
     }
 
     .reveal-verdict {
-      font-weight: 700; font-size: 0.94rem;
+      font-weight: 700; font-size: 0.88rem;
       margin-bottom: 10px; color: var(--ink);
     }
 
-    .reveal-content p { color: var(--muted); margin-bottom: 8px; }
-    .reveal-content p:last-child { margin-bottom: 0; }
+    .reveal-content p { color: var(--muted); margin-bottom: 10px; }
+
+    .reveal-table-wrap { margin: 16px 0; }
+
+    .reveal-steps {
+      display: flex; flex-direction: column;
+      gap: 4px;
+      margin: 16px 0;
+    }
+
+    .reveal-twist {
+      font-weight: 600;
+      color: var(--ink);
+      margin: 18px 0 12px;
+    }
+
+    /* Convergence cards */
+    .converge-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 14px 0;
+    }
+
+    .converge-card {
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+      line-height: 1.65;
+    }
+
+    .converge-card--flawed {
+      background: var(--red-bg);
+      border: 1px solid var(--red-bdr);
+    }
+
+    .converge-card--correct {
+      background: var(--green-bg);
+      border: 1px solid var(--green-bdr);
+    }
+
+    .converge-card-label {
+      font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .converge-card--flawed .converge-card-label { color: var(--red); }
+    .converge-card--correct .converge-card-label { color: var(--green); }
+
+    .converge-step { margin-bottom: 3px; }
+
+    .converge-divider {
+      border-top: 1.5px dashed rgba(0,0,0,0.12);
+      margin: 8px 0;
+    }
+
+    .converge-result { font-weight: 700; }
+
+    .converge-footer {
+      text-align: center;
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 12px 0 4px;
+    }
 
     .key-insight {
       margin-top: 14px; padding: 12px 16px;
@@ -736,6 +801,7 @@
       .chart-meta { flex-direction: column; align-items: flex-start; }
       h2 { font-size: 1.65rem; }
       .demo-card { padding: 20px; }
+      .converge-cards { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -855,11 +921,11 @@
       <div class="prompt-text" style="margin-top:4px">Result: 🐙</div>
 
       <div class="prompt-heading">=== TASK ===</div>
-      <div class="prompt-task">Check whether your working out contains an error. It may or may not contain an error.</div>
+      <div class="prompt-text">Check whether your working out contains an error. It may or may not contain an error.</div>
 
       <div class="demo-action">
         <div class="demo-challenge">Try to spot the error yourself before checking!</div>
-        <button class="demo-btn" id="btn-reveal">Reveal Answer →</button>
+        <button class="demo-btn" id="btn-reveal">Reveal Answer</button>
       </div>
 
       <div class="demo-result" id="demo-result" aria-live="polite"></div>
@@ -1001,59 +1067,87 @@
 }());
 
 /* ------------------------------------------------------------------
-   INTERACTIVE EXAMPLE — reveal answer
+   INTERACTIVE EXAMPLE — reveal / hide answer
 ------------------------------------------------------------------ */
 (function () {
-  const btn       = document.getElementById('btn-reveal');
-  const result    = document.getElementById('demo-result');
-  const table     = document.getElementById('op-table');
-  const errorStep = document.getElementById('demo-step-2');
-  let revealed = false;
+  var btn      = document.getElementById('btn-reveal');
+  var result   = document.getElementById('demo-result');
+  var revealed = false;
+
+  // Build reveal content once (hidden by default)
+  result.innerHTML =
+    '<div class="reveal-content">' +
+      '<div class="reveal-verdict">The error is at <strong>Step 2</strong>.</div>' +
+      '<p>Step 2 claims <strong>🫑\u00a0\u2295\u00a0🪬\u00a0=\u00a0🐙</strong>. ' +
+      'But look at the table \u2014 row\u00a0🫑, col\u00a0🪬:</p>' +
+
+      '<div class="reveal-table-wrap">' +
+        '<table class="op-table">' +
+          '<thead><tr>' +
+            '<th>\u2295</th><th>🐙</th><th class="hl-col">🪬</th><th>🫑</th>' +
+          '</tr></thead>' +
+          '<tbody>' +
+            '<tr><th>🐙</th><td>🐙</td><td class="hl-col">🐙</td><td>🪬</td></tr>' +
+            '<tr><th>🪬</th><td>🐙</td><td class="hl-col">🪬</td><td>🫑</td></tr>' +
+            '<tr><th class="hl-row">🫑</th><td class="hl-row">🐙</td>' +
+              '<td class="hl-row hl-col hl-cell">🪬</td><td class="hl-row">🪬</td></tr>' +
+          '</tbody>' +
+        '</table>' +
+      '</div>' +
+
+      '<p>The correct value is\u00a0<strong>🪬</strong>, not\u00a0🐙.</p>' +
+
+      '<div class="reveal-steps">' +
+        '<div class="prompt-step">Step 1: (🫑\u00a0\u2295\u00a0🐙) = 🐙 \u00a0 [by \u2295 table]</div>' +
+        '<div class="prompt-step is-error">Step 2: (🫑\u00a0\u2295\u00a0🪬) = 🐙 \u00a0 [by \u2295 table]</div>' +
+        '<div class="prompt-step">Step 3: (🐙\u00a0\u2295\u00a0🐙) = 🐙 \u00a0 [by \u2295 table]</div>' +
+      '</div>' +
+
+      '<p class="reveal-twist">If we fix the error, does it change the final answer? No!</p>' +
+
+      '<div class="converge-cards">' +
+
+        '<div class="converge-card converge-card--flawed">' +
+          '<div class="converge-card-label">Flawed path</div>' +
+          '<div class="converge-step">🫑\u00a0\u2295\u00a0🪬\u00a0=\u00a0🐙 \u2717</div>' +
+          '<div class="converge-step">🐙\u00a0\u2295\u00a0🐙\u00a0=\u00a0🐙</div>' +
+          '<div class="converge-divider"></div>' +
+          '<div class="converge-result">Result: 🐙</div>' +
+        '</div>' +
+
+        '<div class="converge-card converge-card--correct">' +
+          '<div class="converge-card-label">Corrected path</div>' +
+          '<div class="converge-step">🫑\u00a0\u2295\u00a0🪬\u00a0=\u00a0🪬 \u2713</div>' +
+          '<div class="converge-step">🐙\u00a0\u2295\u00a0🪬\u00a0=\u00a0🐙</div>' +
+          '<div class="converge-divider"></div>' +
+          '<div class="converge-result">Result: 🐙</div>' +
+        '</div>' +
+
+      '</div>' +
+      '<div class="converge-footer">Both paths \u2192 🐙</div>' +
+
+      '<div class="key-insight">' +
+        '<strong>This is a reconvergent error.</strong> ' +
+        'Because the flawed and corrected logic reach the exact same result, ' +
+        'a model cannot "hack" this test by re-calculating the final answer. ' +
+        'It must trace the reasoning step-by-step.' +
+      '</div>' +
+    '</div>';
+
+  function showAnswer() {
+    revealed = true;
+    btn.textContent = 'Hide Answer';
+    result.classList.add('visible');
+  }
+
+  function hideAnswer() {
+    revealed = false;
+    btn.textContent = 'Reveal Answer';
+    result.classList.remove('visible');
+  }
 
   btn.addEventListener('click', function () {
-    if (revealed) return;
-    revealed = true;
-    btn.disabled = true;
-    btn.textContent = 'Answer revealed';
-
-    // Highlight Step 2 as the error
-    errorStep.classList.add('is-error');
-
-    // Highlight row 🫑 (tbody row index 2) and col 🪬 (cell index 2)
-    const tbody = table.querySelector('tbody');
-    const thead = table.querySelector('thead');
-    const targetRow = 2;  // 🫑
-    const targetCol = 2;  // 🪬
-
-    // Row highlight
-    Array.from(tbody.rows[targetRow].cells).forEach(c => c.classList.add('hl-row'));
-
-    // Column highlight (header + all body rows)
-    thead.rows[0].cells[targetCol].classList.add('hl-col');
-    Array.from(tbody.rows).forEach(r => r.cells[targetCol].classList.add('hl-col'));
-
-    // Circle the intersection cell
-    tbody.rows[targetRow].cells[targetCol].classList.add('hl-cell');
-
-    // Show explanation
-    result.innerHTML =
-      '<div class="reveal-content">' +
-        '<div class="reveal-verdict">The error is at <strong>Step 2</strong>.</div>' +
-        '<p>Step 2 claims <strong>🫑\u00a0⊕\u00a0🪬\u00a0=\u00a0🐙</strong>. ' +
-        'But the table shows row\u00a0🫑, col\u00a0🪬 → <strong>🪬</strong> (highlighted above). ' +
-        'The correct result is\u00a0🪬, not\u00a0🐙.</p>' +
-        '<p>With the corrected value, step 3 would compute <strong>🐙\u00a0⊕\u00a0🪬\u00a0=\u00a0🐙</strong> ' +
-        '(row\u00a0🐙, col\u00a0🪬 →\u00a0🐙). The final answer is still\u00a0🐙.</p>' +
-        '<div class="key-insight">' +
-          '<strong>This is a reconvergent error.</strong> The final answer is correct either way — ' +
-          'a model that only re-executes and compares endpoints ' +
-          'would mark this derivation as valid. It would be wrong.' +
-        '</div>' +
-      '</div>';
-    result.classList.add('visible');
-
-    // Scroll to the table so the highlight is visible
-    table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (revealed) { hideAnswer(); } else { showAnswer(); }
   });
 }());
 
