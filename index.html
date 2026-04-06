@@ -343,33 +343,34 @@
       background: #ffffff;
       box-shadow: 0 1px 0 rgba(0,0,0,0.03);
       max-width: 640px;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.84rem;
+      line-height: 1.7;
+      color: var(--ink);
     }
 
-    .demo-phase-label {
-      font-size: 0.7rem; font-weight: 700;
-      letter-spacing: 0.12em; text-transform: uppercase;
-      color: var(--muted); margin-bottom: 14px;
+    .prompt-heading {
+      font-weight: 700;
+      color: var(--muted);
+      margin: 20px 0 8px;
+      font-size: 0.82rem;
     }
 
-    /* Formal system table */
-    .demo-system { margin-bottom: 22px; }
+    .prompt-heading:first-child { margin-top: 0; }
 
-    .system-symbols {
-      font-size: 0.88rem; color: var(--muted);
-      margin-bottom: 10px;
+    .prompt-text {
+      margin-bottom: 4px;
     }
 
-    .system-symbols .sym { font-size: 1.1em; }
-
-    .system-op-label {
-      font-size: 0.78rem; font-weight: 600;
-      color: var(--muted); letter-spacing: 0.03em;
+    .prompt-note {
+      color: var(--muted);
+      font-size: 0.78rem;
       margin-bottom: 8px;
     }
 
     .op-table {
       border-collapse: collapse;
-      margin-bottom: 18px;
+      margin-bottom: 12px;
       font-size: 1rem;
     }
 
@@ -377,6 +378,7 @@
       width: 46px; height: 38px;
       text-align: center;
       border: 1px solid var(--faint2);
+      transition: background-color 400ms ease;
     }
 
     .op-table th {
@@ -384,121 +386,78 @@
       background: #f4f4f4;
     }
 
-    .op-table td { font-size: 1.05rem; }
-
-    .system-start {
-      font-size: 0.86rem; color: var(--muted);
+    .op-table th.hl-row,
+    .op-table th.hl-col {
+      background: rgba(139,92,246,0.12);
     }
 
-    /* Demo steps */
-    .demo-steps {
-      display: flex; flex-direction: column;
-      gap: 6px; margin-bottom: 20px;
+    .op-table td.hl-row,
+    .op-table td.hl-col {
+      background: rgba(139,92,246,0.07);
     }
 
-    .demo-steps:empty { margin-bottom: 0; }
-
-    .step-item {
-      display: grid;
-      grid-template-columns: 52px 1fr 36px;
-      gap: 10px; align-items: start;
-      padding: 9px 12px; border-radius: 5px;
-      background: #f4f4f4;
-      font-size: 0.86rem; line-height: 1.45;
-      opacity: 0; transform: translateY(5px);
-      transition: opacity 300ms ease, transform 300ms ease;
+    .op-table td.hl-cell {
+      background: rgba(139,92,246,0.15);
+      outline: 2.5px solid var(--accent);
+      outline-offset: -2px;
+      font-weight: 700;
     }
 
-    .step-item.visible { opacity: 1; transform: translateY(0); }
+    .prompt-step {
+      padding: 2px 0;
+    }
 
-    .step-item.is-error {
+    .prompt-step.is-error {
       background: var(--red-bg);
-      border-left: 2px solid var(--red-bdr);
+      border-left: 3px solid var(--red);
+      padding-left: 10px;
+      margin-left: -13px;
+      border-radius: 0 4px 4px 0;
     }
 
-    .step-num {
-      font-size: 0.72rem; font-weight: 700;
-      color: var(--muted); margin-top: 1px;
+    .prompt-task {
+      color: var(--muted);
+      font-style: italic;
     }
-
-    .step-expr {
-      font-family: "SFMono-Regular", Menlo, monospace;
-      font-size: 0.95em;
-    }
-
-    .step-note {
-      font-size: 0.74rem; color: var(--muted);
-      margin-top: 3px;
-    }
-
-    .step-badge {
-      font-size: 0.72rem; font-weight: 700;
-      padding: 2px 5px; border-radius: 3px;
-      text-align: center; white-space: nowrap;
-      margin-top: 1px; align-self: start;
-    }
-
-    .step-badge.unknown { opacity: 0; }
-    .step-badge.ok      { background: var(--green-bg); color: var(--green); }
-    .step-badge.error   { background: var(--red-bg); color: var(--red); }
 
     /* Demo action area */
-    .demo-action { margin-top: 4px; }
+    .demo-action { margin-top: 18px; }
+
+    .demo-challenge {
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-style: italic;
+      margin-bottom: 10px;
+    }
 
     .demo-btn {
       appearance: none; border: none; cursor: pointer;
       background: var(--ink); color: var(--bg);
-      font: inherit; font-size: 0.875rem; font-weight: 600;
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 0.875rem; font-weight: 600;
       padding: 10px 20px; border-radius: 6px;
       transition: opacity 150ms;
     }
 
     .demo-btn:hover { opacity: 0.82; }
+    .demo-btn:disabled { opacity: 0.4; cursor: default; }
 
-    /* Demo question */
-    .demo-question {
-      border-top: 1px solid var(--faint);
-      padding-top: 20px; margin-top: 20px;
-    }
-
-    .demo-question.hidden { display: none; }
-
-    .question-text {
-      font-size: 0.93rem; line-height: 1.7;
-      color: var(--ink); margin-bottom: 16px;
-    }
-
-    .step-buttons {
-      display: flex; gap: 8px; flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-
-    .step-btn {
-      appearance: none;
-      border: 1.5px solid var(--faint2);
-      background: none; cursor: pointer;
-      font: inherit; font-size: 0.84rem; font-weight: 600;
-      padding: 7px 16px; border-radius: 6px;
-      color: var(--ink);
-      transition: background 120ms, border-color 120ms;
-    }
-
-    .step-btn:hover:not(:disabled) { background: rgba(0,0,0,0.05); }
-    .step-btn:disabled { opacity: 0.4; cursor: default; }
-
-    .reveal-btn {
-      appearance: none; border: none; background: none;
-      cursor: pointer; font: inherit;
-      font-size: 0.8rem; color: var(--muted);
-      text-decoration: underline; text-underline-offset: 3px;
-      padding: 0;
-    }
-
-    .reveal-btn:hover { color: var(--ink); }
-
-    /* Demo result */
+    /* Demo result — fade in */
     .demo-result { display: none; }
-    .demo-result.visible { display: block; }
+    .demo-result.visible {
+      display: block;
+      animation: fadeIn 400ms ease;
+    }
+
+    .prompt-step.is-error {
+      animation: fadeIn 400ms ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
 
     .reveal-content {
       border-top: 1px solid var(--faint);
@@ -866,48 +825,41 @@
 <section class="section section--dark" id="example">
   <div class="container">
     <div class="section-label">Try It Yourself</div>
-    <h2>Does this proof contain an error? </h2>
+    <h2>Does this proof contain an error?</h2>
+    <p class="section-desc">
+      Below is an example prompt, exactly as an LLM would receive it.
+    </p>
 
     <div class="demo-card">
-      <div class="demo-phase-label">Formal System</div>
+      <div class="prompt-heading">=== RULES ===</div>
+      <div class="prompt-text">Symbols: {🐙, 🪬, 🫑}</div>
+      <div class="prompt-text">Operation ⊕ (defined by table):</div>
+      <div class="prompt-note">The row is the left operand and the column is the right operand. For example, row a and column b means a ⊕ b.</div>
 
-      <div class="demo-system">
-        <div class="system-symbols">
-          Symbols: <span class="sym">🐙</span> <span class="sym">🪬</span> <span class="sym">🫑</span>
-        </div>
-        <div class="system-op-label">Operation ⊕ — lookup table (row ⊕ col):</div>
-        <table class="op-table" aria-label="Operation table for ⊕">
-          <thead>
-            <tr><th>⊕</th><th>🐙</th><th>🪬</th><th>🫑</th></tr>
-          </thead>
-          <tbody>
-            <tr><th>🐙</th><td>🐙</td><td>🐙</td><td>🪬</td></tr>
-            <tr><th>🪬</th><td>🐙</td><td>🪬</td><td>🫑</td></tr>
-            <tr id="table-row-fish"><th>🫑</th><td>🐙</td><td>🪬</td><td>🪬</td></tr>
-          </tbody>
-        </table>
-        <div class="system-start">Evaluate: <code>((🫑 ⊕ 🐙) ⊕ (🫑 ⊕ 🪬))</code></div>
-      </div>
+      <table class="op-table" id="op-table" aria-label="Operation table for ⊕">
+        <thead>
+          <tr><th>⊕</th><th>🐙</th><th>🪬</th><th>🫑</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>🐙</th><td>🐙</td><td>🐙</td><td>🪬</td></tr>
+          <tr><th>🪬</th><td>🐙</td><td>🪬</td><td>🫑</td></tr>
+          <tr><th>🫑</th><td>🐙</td><td>🪬</td><td>🪬</td></tr>
+        </tbody>
+      </table>
 
-      <div class="demo-steps" id="demo-steps" aria-live="polite"></div>
+      <div class="prompt-heading">=== YOUR WORKING OUT ===</div>
+      <div class="prompt-text">Start: ((🫑 ⊕ 🐙) ⊕ (🫑 ⊕ 🪬))</div>
+      <div class="prompt-step" id="demo-step-1">Step 1: (🫑 ⊕ 🐙) = 🐙 &nbsp; [by ⊕ table]</div>
+      <div class="prompt-step" id="demo-step-2">Step 2: (🫑 ⊕ 🪬) = 🐙 &nbsp; [by ⊕ table]</div>
+      <div class="prompt-step" id="demo-step-3">Step 3: (🐙 ⊕ 🐙) = 🐙 &nbsp; [by ⊕ table]</div>
+      <div class="prompt-text" style="margin-top:4px">Result: 🐙</div>
 
-      <div class="demo-action" id="demo-action">
-        <button class="demo-btn" id="btn-primary">See the derivation →</button>
-      </div>
+      <div class="prompt-heading">=== TASK ===</div>
+      <div class="prompt-task">Check whether your working out contains an error. It may or may not contain an error.</div>
 
-      <div class="demo-question hidden" id="demo-question">
-        <div class="demo-phase-label" style="margin-top:20px; padding-top:20px; border-top:1px solid var(--faint)">Your assessment</div>
-        <p class="question-text">
-          The derivation reached <strong>🐙</strong> — which is the correct answer.
-          But is every step valid? Which step, if any, first contains a rule violation?
-        </p>
-        <div class="step-buttons" id="step-buttons">
-          <button class="step-btn" data-step="1">Step 1</button>
-          <button class="step-btn" data-step="2">Step 2</button>
-          <button class="step-btn" data-step="3">Step 3</button>
-          <button class="step-btn" data-step="0">No error</button>
-        </div>
-        <button class="reveal-btn" id="btn-reveal">Reveal answer</button>
+      <div class="demo-action">
+        <div class="demo-challenge">Try to spot the error yourself before checking!</div>
+        <button class="demo-btn" id="btn-reveal">Reveal Answer →</button>
       </div>
 
       <div class="demo-result" id="demo-result" aria-live="polite"></div>
@@ -1049,147 +1001,61 @@
 }());
 
 /* ------------------------------------------------------------------
-   INTERACTIVE EXAMPLE — state machine
+   INTERACTIVE EXAMPLE — reveal answer
 ------------------------------------------------------------------ */
-const STEPS = [
-  {
-    label: 'Step 1',
-    expr:  '🫑 ⊕ 🐙 = 🐙',
-    note:  'row 🫑, col 🐙 → look up ⊕ table',
-    isError: false
-  },
-  {
-    label: 'Step 2',
-    expr:  '🫑 ⊕ 🪬 = 🐙',   // wrong — should be 🪬
-    note:  'row 🫑, col 🪬 → look up ⊕ table',
-    isError: true
-  },
-  {
-    label: 'Step 3',
-    expr:  '🐙 ⊕ 🐙 = 🐙',
-    note:  'row 🐙, col 🐙 → look up ⊕ table',
-    isError: false
-  }
-];
+(function () {
+  const btn       = document.getElementById('btn-reveal');
+  const result    = document.getElementById('demo-result');
+  const table     = document.getElementById('op-table');
+  const errorStep = document.getElementById('demo-step-2');
+  let revealed = false;
 
-const CORRECT_STEP = 2; // 1-indexed
+  btn.addEventListener('click', function () {
+    if (revealed) return;
+    revealed = true;
+    btn.disabled = true;
+    btn.textContent = 'Answer revealed';
 
-let demoPhase  = 'idle';   // idle → step-0 → step-1 → step-2 → question → done
-let stepEls    = [];
-let answered   = false;
+    // Highlight Step 2 as the error
+    errorStep.classList.add('is-error');
 
-const demoSteps    = document.getElementById('demo-steps');
-const demoAction   = document.getElementById('demo-action');
-const demoQuestion = document.getElementById('demo-question');
-const demoResult   = document.getElementById('demo-result');
-const btnPrimary   = document.getElementById('btn-primary');
+    // Highlight row 🫑 (tbody row index 2) and col 🪬 (cell index 2)
+    const tbody = table.querySelector('tbody');
+    const thead = table.querySelector('thead');
+    const targetRow = 2;  // 🫑
+    const targetCol = 2;  // 🪬
 
-function addStepItem(index) {
-  const s = STEPS[index];
-  const el = document.createElement('div');
-  el.className = 'step-item';
-  el.innerHTML =
-    '<div class="step-num">' + s.label + '</div>' +
-    '<div class="step-content">' +
-      '<div class="step-expr">' + s.expr + '</div>' +
-      '<div class="step-note">' + s.note + '</div>' +
-    '</div>' +
-    '<div class="step-badge unknown" id="badge-' + index + '">?</div>';
-  demoSteps.appendChild(el);
-  // Trigger transition
-  requestAnimationFrame(() => el.classList.add('visible'));
-  stepEls[index] = el;
-}
+    // Row highlight
+    Array.from(tbody.rows[targetRow].cells).forEach(c => c.classList.add('hl-row'));
 
-function updateBadges() {
-  STEPS.forEach((s, i) => {
-    const badge = document.getElementById('badge-' + i);
-    if (!badge) return;
-    if (s.isError) {
-      badge.textContent = '✗';
-      badge.className = 'step-badge error';
-      stepEls[i].classList.add('is-error');
-    } else {
-      badge.textContent = '✓';
-      badge.className = 'step-badge ok';
-    }
+    // Column highlight (header + all body rows)
+    thead.rows[0].cells[targetCol].classList.add('hl-col');
+    Array.from(tbody.rows).forEach(r => r.cells[targetCol].classList.add('hl-col'));
+
+    // Circle the intersection cell
+    tbody.rows[targetRow].cells[targetCol].classList.add('hl-cell');
+
+    // Show explanation
+    result.innerHTML =
+      '<div class="reveal-content">' +
+        '<div class="reveal-verdict">The error is at <strong>Step 2</strong>.</div>' +
+        '<p>Step 2 claims <strong>🫑\u00a0⊕\u00a0🪬\u00a0=\u00a0🐙</strong>. ' +
+        'But the table shows row\u00a0🫑, col\u00a0🪬 → <strong>🪬</strong> (highlighted above). ' +
+        'The correct result is\u00a0🪬, not\u00a0🐙.</p>' +
+        '<p>With the corrected value, step 3 would compute <strong>🐙\u00a0⊕\u00a0🪬\u00a0=\u00a0🐙</strong> ' +
+        '(row\u00a0🐙, col\u00a0🪬 →\u00a0🐙). The final answer is still\u00a0🐙.</p>' +
+        '<div class="key-insight">' +
+          '<strong>This is a reconvergent error.</strong> The final answer is correct either way — ' +
+          'a model that only re-executes and compares endpoints ' +
+          'would mark this derivation as valid. It would be wrong.' +
+        '</div>' +
+      '</div>';
+    result.classList.add('visible');
+
+    // Scroll to the table so the highlight is visible
+    table.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
-}
-
-function showReveal(chosenStep, isReveal) {
-  if (answered) return;
-  answered = true;
-
-  // Disable step buttons
-  document.querySelectorAll('.step-btn').forEach(b => b.disabled = true);
-
-  updateBadges();
-
-  let verdict;
-  if (isReveal) {
-    verdict = 'The error is at <strong>Step ' + CORRECT_STEP + '</strong>.';
-  } else if (chosenStep === CORRECT_STEP) {
-    verdict = 'Correct — the error is at <strong>Step ' + CORRECT_STEP + '</strong>.';
-  } else if (chosenStep === 0) {
-    verdict = 'There is an error — at <strong>Step ' + CORRECT_STEP + '</strong>.';
-  } else {
-    verdict = 'Not quite. Step ' + chosenStep + ' is valid here. The error is at <strong>Step ' + CORRECT_STEP + '</strong>.';
-  }
-
-  demoResult.innerHTML =
-    '<div class="reveal-content">' +
-      '<div class="reveal-verdict">' + verdict + '</div>' +
-      '<p>Step 2 claims <strong>🫑 ⊕ 🪬 = 🐙</strong>. ' +
-      'But the table shows: row 🫑, col 🪬 → <strong>🪬</strong>. ' +
-      'The correct result is 🪬, not 🐙.</p>' +
-      '<p>With the corrected value, step 3 would compute <strong>🐙 ⊕ 🪬 = 🐙</strong> ' +
-      '(row 🐙, col 🪬 → 🐙). The final answer is unchanged.</p>' +
-      '<div class="key-insight">' +
-        '<strong>This is a reconvergent error.</strong> The endpoint is correct either way — ' +
-        'a model that only re-executes and checks <strong>🐙 = 🐙</strong> ' +
-        'would mark this derivation as valid. It would be wrong.' +
-      '</div>' +
-    '</div>';
-  demoResult.classList.add('visible');
-}
-
-function advancePrimary() {
-  const phases = ['idle', 'step-0', 'step-1', 'step-2', 'question'];
-  const currentIdx = phases.indexOf(demoPhase);
-
-  if (demoPhase === 'idle') {
-    demoPhase = 'step-0';
-    addStepItem(0);
-    btnPrimary.textContent = 'Show step 2 →';
-
-  } else if (demoPhase === 'step-0') {
-    demoPhase = 'step-1';
-    addStepItem(1);
-    btnPrimary.textContent = 'Show step 3 →';
-
-  } else if (demoPhase === 'step-1') {
-    demoPhase = 'step-2';
-    addStepItem(2);
-    btnPrimary.textContent = 'Assess this derivation →';
-
-  } else if (demoPhase === 'step-2') {
-    demoPhase = 'question';
-    demoQuestion.classList.remove('hidden');
-    demoAction.style.display = 'none';
-    demoQuestion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-}
-
-btnPrimary.addEventListener('click', advancePrimary);
-
-document.getElementById('demo-question').addEventListener('click', e => {
-  if (e.target.matches('.step-btn')) {
-    showReveal(parseInt(e.target.dataset.step, 10), false);
-  }
-  if (e.target.id === 'btn-reveal') {
-    showReveal(-1, true);
-  }
-});
+}());
 
 
 /* ------------------------------------------------------------------
