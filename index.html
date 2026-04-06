@@ -61,35 +61,6 @@
     .container.wide  { max-width: var(--wide); }
 
     /* =========================================================
-       TOPBAR
-    ========================================================= */
-    .topbar {
-      position: sticky; top: 0; z-index: 100;
-      padding: 14px 24px;
-      display: flex; align-items: center; justify-content: space-between;
-      background: rgba(245,239,234,0.88);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--faint);
-    }
-
-    .topbar-brand {
-      font-weight: 700; font-size: 0.88rem;
-      letter-spacing: 0.02em; color: var(--ink);
-      text-decoration: none;
-    }
-
-    .topbar nav { display: flex; gap: 22px; }
-
-    .topbar nav a {
-      color: var(--muted); font-size: 0.82rem;
-      text-decoration: none;
-      transition: color 120ms;
-    }
-
-    .topbar nav a:hover { color: var(--ink); opacity: 1; }
-
-    /* =========================================================
        HERO
     ========================================================= */
     .hero {
@@ -170,34 +141,16 @@
     }
 
     /* =========================================================
-       STATS ROW
-    ========================================================= */
-    .stats-row {
-      display: grid; grid-template-columns: repeat(4,1fr);
-      border-top: 1px solid var(--faint);
-      border-bottom: 1px solid var(--faint);
-      padding: 22px 0;
-    }
-
-    .stat { text-align: center; }
-
-    .stat-value {
-      display: block;
-      font-family: "Iowan Old Style","Palatino Linotype",Georgia,serif;
-      font-size: 1.75rem; font-weight: 700;
-      letter-spacing: -0.03em; line-height: 1;
-    }
-
-    .stat-label {
-      display: block; margin-top: 6px;
-      color: var(--muted); font-size: 0.76rem; line-height: 1.4;
-    }
-
-    /* =========================================================
        SECTIONS
     ========================================================= */
     .section         { padding: 56px 0; }
     .section--tinted { background: var(--surface); }
+    .section--dark {
+      background: #0a0a0a;
+      color: #f5f5f5;
+      border-top: 1px solid #171717;
+      border-bottom: 1px solid #171717;
+    }
 
     .section-label {
       font-size: 0.7rem; font-weight: 700;
@@ -232,6 +185,58 @@
     }
     .prose p:last-child { margin-bottom: 0; }
     .prose strong { color: var(--ink); }
+
+    .section--dark .section-label,
+    .section--dark .section-desc,
+    .section--dark .prose p,
+    .section--dark .gap-legend,
+    .section--dark .gap-axis-ticks,
+    .section--dark .benchmark-note {
+      color: #a8a8a8;
+    }
+
+    .section--dark .section-label::before {
+      background: #6d6d6d;
+    }
+
+    .section--dark h2,
+    .section--dark .prose strong,
+    .section--dark .benchmark-note em,
+    .section--dark .gap-callout strong {
+      color: #f5f5f5;
+    }
+
+    .section--dark .demo-card {
+      border-color: #2a2a2a;
+      box-shadow: 0 20px 44px rgba(0,0,0,0.28);
+    }
+
+    .section--dark .gap-axis-row,
+    .section--dark .benchmark-note {
+      border-color: rgba(255,255,255,0.10);
+    }
+
+    .section--dark .leg-dot-hollow {
+      border-color: #a8a8a8;
+    }
+
+    .section--dark .leg-dot-filled {
+      background: #a8a8a8;
+    }
+
+    .section--dark .db-line {
+      background: rgba(255,255,255,0.16);
+    }
+
+    .section--dark .db-vals {
+      color: #b3b3b3;
+    }
+
+    .section--dark .gap-callout {
+      background: rgba(255,255,255,0.04);
+      border-left-color: #a78bfa;
+      color: #a8a8a8;
+    }
 
     /* =========================================================
        TWO-PATH DIAGRAM
@@ -502,8 +507,6 @@
 
     .key-insight strong { color: var(--ink); }
 
-    /* Error Types section removed */
-
     /* =========================================================
        GAP / DUMBBELL CHART
     ========================================================= */
@@ -628,16 +631,30 @@
     .chip.is-active { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
 
     .chart-meta { display: none; }
-    .legend { display: flex; gap: 16px; flex-wrap: wrap; }
-    .legend-item { display: inline-flex; align-items: center; gap: 6px; }
-    .swatch { width: 8px; height: 8px; border-radius: 50%; }
 
     .benchmark-chart { display: grid; gap: 6px; }
 
     .chart-divider {
-      border: none;
-      border-top: 1.5px dashed var(--faint);
-      margin: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0 8px;
+      color: #7f7f7f;
+      font-size: 0.67rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .chart-divider::before,
+    .chart-divider::after {
+      content: '';
+      flex: 1;
+      border-top: 1.5px dashed rgba(17,17,17,0.18);
+    }
+
+    .chart-divider span {
+      white-space: nowrap;
     }
 
     .benchmark-row {
@@ -711,60 +728,6 @@
     }
 
     /* =========================================================
-       DATASET & CITATION
-    ========================================================= */
-    .dataset-cards {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 14px; margin: 28px 0 36px;
-    }
-
-    .dataset-card {
-      border: 1px solid var(--faint2); border-radius: 8px;
-      padding: 22px 24px; background: #ffffff;
-      text-decoration: none; color: var(--ink);
-      display: block;
-      transition: border-color 150ms, box-shadow 150ms;
-    }
-
-    .dataset-card:hover {
-      border-color: rgba(0,0,0,0.2);
-      box-shadow: 0 2px 14px rgba(0,0,0,0.07);
-      opacity: 1;
-    }
-
-    .dataset-card-icon { font-size: 1.4rem; margin-bottom: 10px; }
-
-    .dataset-card-title { font-weight: 700; font-size: 0.93rem; margin-bottom: 4px; }
-
-    .dataset-card-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.52; }
-
-    .citation-wrap { position: relative; }
-
-    .citation-block {
-      background: #f4f4f4;
-      border: 1px solid var(--faint);
-      border-radius: 7px; padding: 18px 20px;
-      font-family: "SFMono-Regular", Menlo, monospace;
-      font-size: 0.78rem; line-height: 1.75;
-      color: var(--muted);
-      white-space: pre;
-      overflow-x: auto;
-    }
-
-    .copy-btn {
-      position: absolute; top: 12px; right: 12px;
-      appearance: none;
-      border: 1px solid var(--faint2);
-      background: #ffffff; cursor: pointer;
-      font: inherit; font-size: 0.76rem;
-      padding: 4px 10px; border-radius: 4px;
-      color: var(--muted);
-      transition: color 120ms;
-    }
-
-    .copy-btn:hover { color: var(--ink); }
-
-    /* =========================================================
        FOOTER
     ========================================================= */
     .footer-wrap {
@@ -786,8 +749,6 @@
       .hero { padding: 52px 24px 44px; }
       .stats-row { grid-template-columns: repeat(2,1fr); gap: 20px; padding: 18px 0; }
       .two-paths { grid-template-columns: 1fr; }
-      .error-grid { grid-template-columns: 1fr; }
-      .dataset-cards { grid-template-columns: 1fr; }
       .dumbbell-row { grid-template-columns: 130px 1fr 80px; font-size: 0.78rem; }
       .gap-axis-row  { grid-template-columns: 130px 1fr; }
       .db-name { font-size: 0.78rem; }
@@ -844,48 +805,32 @@
     <h2>Can a model accurately detect its own reasoning error?</h2>
     <div class="prose">
       <p>
-        The goal is to test metacognitive error detection.
-        A model may be strong enough to solve a problem from scratch and still fail to notice
-        that a shown derivation contains a wrong step. Emoji-Bench is built to isolate that distinction.
+        Metacognition is a critical component of human intelligence. We reflect on our own thought
+        processes, identify errors, and adapt our reasoning. En route to AGI, we need models that
+        can do the same - to recognize when they're wrong and fix the error accordingly.
+        <strong>But how do we rigorously test this?</strong>
       </p>
       <p>
-        A natural shortcut is to re-execute the chain and compare the final answer.
-        If the endpoint matches, say "no error." Emoji-Bench breaks that shortcut:
-        one intermediate step violates the rules, but the chain still reaches the correct final answer.
-        Endpoint comparison gives the wrong verdict. The only way to pass is to check each step directly.
+        Existing self-error detection benchmarks suffer from three primary limitations. First, they
+        rely on human annotators, which is expensive, difficult to scale, and susceptible to model
+        subjectivity bias. Second, they utilize heavily trained domains like mathematics, allowing
+        models to predict common errors via pattern-matching rather than genuinely verifying
+        reasoning steps. Third, they typically feature cascading errors where a flawed intermediate
+        step leads to an incorrect final answer. Our preliminary experiments confirm this allows
+        models to "hack" the evaluation: rather than tracing an error to its source, a model can
+        simply re-derive the answer from scratch, compare final outcomes, and declare an error
+        without actually locating it.
       </p>
-    </div>
-
-    <div class="two-paths">
-      <div class="path path--wrong">
-        <div class="path-label">Re-execution strategy</div>
-        <div class="path-steps">
-          <div class="path-step">Step 1: valid</div>
-          <div class="path-step err">Step 2: rule violated ←</div>
-          <div class="path-step">Step 3: locally valid</div>
-          <div class="path-step result">Final: 🐙 (correct endpoint)</div>
-        </div>
-        <div class="path-verdict wrong">Re-run → same answer → "no error" ✗</div>
-      </div>
-      <div class="path path--right">
-        <div class="path-label">Step-level verification</div>
-        <div class="path-steps">
-          <div class="path-step">Step 1: valid ✓</div>
-          <div class="path-step flagged">Step 2: 🚨 rule violated</div>
-          <div class="path-step dim">Step 3</div>
-          <div class="path-step dim">Final: 🐙</div>
-        </div>
-        <div class="path-verdict right">"Error at step 2." ✓</div>
-      </div>
-    </div>
-
-    <div class="prose">
       <p>
-        We use emoji symbols as abstract mathematical objects to prevent models from reaching
-        into their training data. A model may know that 1&nbsp;+&nbsp;1&nbsp;=&nbsp;2, but it has no
-        prior knowledge of 🌸&nbsp;⊕&nbsp;🤗. Every rule has to be read from the prompt.
-        That keeps the benchmark focused on step-level verification against new rules,
-        not recall of familiar facts.
+        To overcome these limitations, we introduce Emoji-Bench, a benchmark of 1,000 novel logic
+        questions designed to isolate and test true step-level verification. First, Emoji-Bench
+        utilizes procedural generation for deterministic evaluation, eliminating the need for human
+        annotators. Second, it employs novel formal systems represented by emojis, ensuring the
+        tasks are entirely absent from training corpora and thus immune to pattern-matching.
+        Finally, each question contains exactly one intermediate rule violation but is explicitly
+        engineered to still reach the correct final answer. This renders re-execution and
+        final-answer comparison useless, ensuring that models can only succeed through rigorous,
+        step-by-step verification.
       </p>
     </div>
   </div>
@@ -894,7 +839,7 @@
 <!-- ================================================================
      SECTION: INTERACTIVE EXAMPLE
 ================================================================ -->
-<section class="section" id="example">
+<section class="section section--dark" id="example">
   <div class="container">
     <div class="section-label">Try It Yourself</div>
     <h2>Walk through a real example.</h2>
@@ -985,7 +930,7 @@
 <!-- ================================================================
      SECTION: THE FINDING
 ================================================================ -->
-<section class="section" id="finding">
+<section class="section section--dark" id="finding">
   <div class="container">
     <div class="section-label">The Finding</div>
     <h2>Detection and localization diverge sharply.</h2>
@@ -1046,7 +991,7 @@
    HERO EMOJI SWAP — change the title emoji each time hero re-enters view
 ------------------------------------------------------------------ */
 (function () {
-  var POOL = ['🐙','🪬','🫑','🔵','⭐','🌙','🦊','🔮','🌺','🍄','🦋','🟠','🔺','🌀','🌸'];
+  var POOL = ['🪷','🪬','👩‍🎤','💐','⭐','🌙','🌠','🔮','🌺','🍄','🦋','🫀','🪄','🌀','🌸'];
   var span = document.getElementById('hero-em');
   var hero = document.querySelector('.hero');
   if (!span || !hero) return;
@@ -1342,7 +1287,7 @@ function renderBenchmarkChart() {
 
   sorted.forEach((model, i) => {
     if (i > 0 && sorted[i - 1].thinking && !model.thinking) {
-      const divider = document.createElement('hr');
+      const divider = document.createElement('div');
       divider.className = 'chart-divider';
       elChart.appendChild(divider);
     }
@@ -1431,20 +1376,6 @@ function refreshLeaderboard() {
 
 refreshLeaderboard();
 
-
-/* ------------------------------------------------------------------
-   COPY BIBTEX
------------------------------------------------------------------- */
-document.getElementById('copyBibBtn').addEventListener('click', function () {
-  const text = document.getElementById('bibtex-block').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    this.textContent = 'Copied!';
-    setTimeout(() => { this.textContent = 'Copy'; }, 1800);
-  }).catch(() => {
-    this.textContent = 'Copy failed';
-    setTimeout(() => { this.textContent = 'Copy'; }, 1800);
-  });
-});
 
 
 </script>
