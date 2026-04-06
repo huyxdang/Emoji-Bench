@@ -12,24 +12,31 @@ The goal is to test metacognitive error detection, not just problem solving. A m
 
 This repo is now focused on a single benchmark condition: **`E-RECONV`**.
 
-## What `E-RECONV` Tests
+## What is `E-RECONV`?
 
-In `E-RECONV`, a derivation contains exactly one invalid step, but the chain still reaches the correct final answer.
+In `E-RECONV`, a reasoning derivation contains exactly one invalid step, but the chain still reaches the correct final answer.
 
-That matters because a shallow checker can often get away with re-executing the chain and comparing the endpoint:
+That matters because a "shallow" checker can often get away with re-executing the reasoning and comparing the endpoint:
 
 - if the endpoint is wrong, say "there is an error"
 - if the endpoint is right, say "no error"
+
+This means the LLM isn't actually checking its steps - Rather, it's recomputing the whole reasoning chain, and comparing the final answers. This is not the behaviour we want, as we'd like to test whether the model can verify errors against rules and constraints. 
 
 `E-RECONV` breaks that shortcut. The endpoint is still correct. The only way to succeed is to verify the steps themselves.
 
 This makes `E-RECONV` the cleanest setting for the benchmark’s core question: does the model actually notice its own reasoning error, or does it accept an invalid derivation because the conclusion looks fine?
 
+## Why Emojis? 
+We use emojis as mathematical abstracts to prevent the model from being able to use its mathematical knowledge from its math training data. A model may know `1 + 1 = 2`, but it wouldn't know `🌸 (+) 🤗 = 👋`.
+
+There are many substitutes to emojis. We could have also defined an operation like `1 + 7 = 4` - Our experiments demonstrate that results with either emojis or numbers for abstract operations yield similar results. The choice to keep it as emojis was partly to enhance the visuality of the project.
+
 ## Benchmark Shape
 
 Each example gives the model:
 
-- a procedurally generated formal system built from emoji symbols
+- a procedurally generated **novel** formal system built from emoji symbols
 - operation tables and optional transforms / derived operations
 - a worked derivation
 - a task: return `has_error` and `error_step`
@@ -178,6 +185,6 @@ artifacts/eval-report-e-reconv-1000
 
 ## Why Only `E-RECONV`
 
-Earlier versions of the project included other error types as well, and we did run experiments on them. But the project now centers only `E-RECONV`.
+Earlier versions of the project included other error types as well (as you can tell from the extra files), and we did run experiments on them. But the project now centers only `E-RECONV`.
 
-The reason is simple: it is the cleanest experiment for the goal above. If the final answer is still correct, endpoint checking is no longer enough. A model either catches the bad step or it doesn’t. That makes `E-RECONV` the most direct test of whether models can accurately detect their own reasoning errors.
+It is the cleanest experiment for the goal above. If the final answer is still correct, endpoint checking is no longer enough. A model either catches the bad step or it doesn’t. That makes `E-RECONV` the most direct test of whether models can accurately detect their own reasoning errors.
