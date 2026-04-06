@@ -241,9 +241,7 @@
       background: rgba(255,255,255,0.16);
     }
 
-    .section--dark .db-vals {
-      color: #b3b3b3;
-    }
+
 
     .section--dark .gap-callout {
       background: rgba(255,255,255,0.04);
@@ -561,7 +559,19 @@
       margin-bottom: 20px; align-items: center;
     }
 
+    .gap-legend--stacked {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
     .gap-legend-item { display: flex; align-items: center; gap: 6px; }
+
+    .gap-legend-caption {
+      font-size: 0.7rem;
+      color: #777;
+      font-style: italic;
+    }
 
     .leg-dot-hollow {
       width: 10px; height: 10px; border-radius: 50%;
@@ -586,8 +596,13 @@
       padding: 0 0 0 0;
     }
 
+    .gap-tier-divider {
+      margin: 10px 0 6px;
+      border-top: 1.5px dashed rgba(255,255,255,0.12);
+    }
+
     .dumbbell-row {
-      display: grid; grid-template-columns: 190px 1fr 96px;
+      display: grid; grid-template-columns: 190px 1fr;
       gap: 14px; align-items: center;
       padding: 8px 0;
       border-bottom: 1px solid var(--faint);
@@ -630,10 +645,26 @@
       background: var(--color, #888);
     }
 
-    .db-vals {
-      font-size: 0.76rem; color: var(--muted);
-      font-variant-numeric: tabular-nums;
-      text-align: right; white-space: nowrap;
+    .db-circle[data-tip] {
+      cursor: default;
+    }
+
+    .db-circle[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #f5f5f5;
+      background: #222;
+      padding: 3px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 10;
     }
 
     .gap-callout {
@@ -651,6 +682,7 @@
     ========================================================= */
     .benchmark-controls {
       display: flex; gap: 24px;
+      align-items: center;
       margin: 16px 0 20px;
       border-bottom: 1px solid var(--faint);
       padding-bottom: 12px;
@@ -765,6 +797,12 @@
       text-align: right; color: var(--ink);
     }
 
+    .benchmark-higher {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
     .benchmark-note {
       margin-top: 16px; padding-top: 16px;
       border-top: 1px solid var(--faint);
@@ -794,7 +832,7 @@
       .hero { padding: 52px 24px 44px; }
       .stats-row { grid-template-columns: repeat(2,1fr); gap: 20px; padding: 18px 0; }
       .two-paths { grid-template-columns: 1fr; }
-      .dumbbell-row { grid-template-columns: 130px 1fr 80px; font-size: 0.78rem; }
+      .dumbbell-row { grid-template-columns: 130px 1fr; font-size: 0.78rem; }
       .gap-axis-row  { grid-template-columns: 130px 1fr; }
       .db-name { font-size: 0.78rem; }
       .benchmark-row { grid-template-columns: 1fr; gap: 4px; }
@@ -952,6 +990,7 @@
       <div class="control-group" id="difficultyButtons">
         <span class="control-label">Difficulty</span>
       </div>
+      <span class="benchmark-higher">higher is better →</span>
     </div>
 
     <div class="chart-meta">
@@ -964,7 +1003,7 @@
     <div class="benchmark-chart" id="benchmarkChart" aria-live="polite"></div>
 
     <p class="benchmark-note">
-      Error Traced is the share of examples where the model correctly identifies that an error exists <em>and</em> names the exact step where it first occurs.
+      Error Localized is the % of examples where the model correctly identifies that an error exists <em>and</em> names the exact step where it first occurs.
     </p>
   </div>
 </section>
@@ -975,37 +1014,33 @@
 <section class="section section--dark" id="finding">
   <div class="container">
     <div class="section-label">The Finding</div>
-    <h2>Detection and localization diverge sharply.</h2>
-    <p class="section-desc">
-      Two metrics: <strong>Error Found</strong> — does the model say an error exists?
-      <strong>Error Traced</strong> — does it name the exact first wrong step?
-      For models using re-execution shortcuts, these diverge sharply.
-      Models with extended thinking close the gap.
-    </p>
-
-    <div class="gap-legend">
-      <span class="gap-legend-item">
-        <span class="leg-dot-filled"></span> Error Traced (filled)
-      </span>
-      <span class="gap-legend-item">
-        <span class="leg-dot-hollow"></span> Error Found (hollow)
-      </span>
+    <h2>They know something's wrong. They can't say what.</h2>
+    <div class="gap-legend gap-legend--stacked">
+      <div class="gap-legend-item">
+        <span class="leg-dot-hollow"></span>
+        <span><strong>Error Detected (%)</strong> — does the model correctly say an error exists?</span>
+      </div>
+      <div class="gap-legend-item">
+        <span class="leg-dot-filled"></span>
+        <span><strong>Error Localized (%)</strong> — does it also name the exact first wrong step?</span>
+      </div>
+      <div class="gap-legend-caption">A wide line = model detects errors but can't pinpoint where exactly</div>
     </div>
 
     <div class="gap-axis-row">
       <div></div>
       <div class="gap-axis-ticks">
-        <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+        <span>25%</span><span>50%</span><span>75%</span><span>100%</span>
       </div>
     </div>
 
-    <div id="gap-chart" aria-label="Dumbbell chart: Error Found vs Error Traced per model"></div>
+    <div id="gap-chart" aria-label="Dumbbell chart: Error Detected vs Error Localized per model"></div>
 
     <div class="gap-callout">
-      <strong>Reading this chart:</strong> The filled circle is Error Traced; the hollow circle is Error Found.
-      A wide line signals a model that spots errors but cannot pinpoint where —
-      consistent with endpoint-comparison heuristics rather than genuine step verification.
-      GPT-5.4 thinking models show a near-zero gap, suggesting actual step-by-step reasoning.
+      Models with thinking (e.g. GPT-5.4) show a near-zero gap between detection and localization, 
+      suggesting genuine step-by-step verification. Non-thinking models (e.g. GPT-4.1 mini) detect 
+      errors at high rates but fail to locate them — the wide gap suggests they're exhibiting 
+      sycophancy: agreeing that an error exists because they were asked to check for one, without actually finding it.
     </div>
   </div>
 </section>
@@ -1167,12 +1202,25 @@ const GAP_DATA = [
 
 const PROVIDER_COLOR = { openai: '#1f9d8b', anthropic: '#96633f', mistral: '#d85732' };
 
+// Map 25–100 range to 0–100% position
+function gapScale(v) { return (v - 25) / 75 * 100; }
+
 function buildGapChart() {
   const container = document.getElementById('gap-chart');
+  let prevThinking = null;
   GAP_DATA.forEach(d => {
+    // Insert tier divider between thinking and non-thinking
+    if (prevThinking === true && !d.thinking) {
+      const divider = document.createElement('div');
+      divider.className = 'gap-tier-divider';
+      container.appendChild(divider);
+    }
+    prevThinking = d.thinking;
+
     const color  = PROVIDER_COLOR[d.provider];
     const lo     = Math.min(d.detect, d.step);
     const hi     = Math.max(d.detect, d.step);
+    const sStep  = gapScale(d.step);
 
     const row = document.createElement('div');
     row.className = 'dumbbell-row';
@@ -1182,13 +1230,13 @@ function buildGapChart() {
         '<span>' + d.name + (d.thinking ? ' <span class="thinking-tag">thinking</span>' : '') + '</span>' +
       '</div>' +
       '<div class="db-track">' +
-        '<div class="db-line" style="left:' + d.step + '%;right:' + (100 - d.step) + '%"' +
-          ' data-lo="' + lo + '" data-hi-right="' + (100 - hi) + '"></div>' +
-        '<div class="db-circle hollow" style="left:' + d.step + '%;--color:' + color + '"' +
-          ' data-target="' + d.detect + '"></div>' +
-        '<div class="db-circle filled" style="left:' + d.step + '%;--color:' + color + '"></div>' +
-      '</div>' +
-      '<div class="db-vals">' + d.step.toFixed(1) + ' / ' + d.detect.toFixed(1) + '</div>';
+        '<div class="db-line" style="left:' + sStep + '%;right:' + (100 - sStep) + '%"' +
+          ' data-lo="' + gapScale(lo) + '" data-hi-right="' + (100 - gapScale(hi)) + '"></div>' +
+        '<div class="db-circle hollow" style="left:' + sStep + '%;--color:' + color + '"' +
+          ' data-target="' + gapScale(d.detect) + '" data-tip="Detected: ' + d.detect.toFixed(1) + '%"></div>' +
+        '<div class="db-circle filled" style="left:' + sStep + '%;--color:' + color + '"' +
+          ' data-tip="Localized: ' + d.step.toFixed(1) + '%"></div>' +
+      '</div>';
     container.appendChild(row);
   });
 }
@@ -1210,7 +1258,7 @@ const MODELS = [
 
 const METRIC_CONFIG = {
   step: {
-    label: 'Error Traced',
+    label: 'Error Localized',
     description: 'The model correctly identifies that an error exists and names the exact step where it first occurs.'
   }
 };
